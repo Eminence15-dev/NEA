@@ -66,13 +66,13 @@ const RunPredictApp = () => {
   const [searchTerm,      setSearchTerm]      = useState("");
   const [selectedGender,  setSelectedGender]  = useState("male");
 
-  useEffect(() => {
-    setCustomAthletes(loadCustomAthletes());
-    setRecentSimulations(loadRecentSimulations());
-  }, []);
-
-  useEffect(() => { saveCustomAthletes(customAthletes); },       [customAthletes]);
-  useEffect(() => { saveRecentSimulations(recentSimulations); }, [recentSimulations]);
+useEffect(() => {
+  const load = async () => {
+    setCustomAthletes(await loadCustomAthletes());
+    setRecentSimulations(await loadRecentSimulations());
+  };
+  load();
+}, []);
 
   const showToast = (message, type = "success") => {
     setToast({ message, type });
