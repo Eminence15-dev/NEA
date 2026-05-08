@@ -11,7 +11,7 @@
 // ================================================================
 
 import { Search, Award, UserPlus, Trash2, Database } from "lucide-react";
-import { getStaticByGenderAndEvent, male100Runners, female100Runners, male200Runners, female200Runners } from "../data/athleteData";
+import { getRunnersByEvent, runners100, runners200 } from "../data/athleteData";
 import { NavBar } from "./HomePage";
 
 /**
@@ -31,11 +31,11 @@ const DatabasePage = ({
   customAthletes, removeCustomAthlete,
   setCurrentPage, mobileMenuOpen, setMobileMenuOpen, Toast,
 }) => {
-  const mCount = male100Runners.length   + male200Runners.length   + customAthletes.filter(a=>a.gender==="male").length;
-  const fCount = female100Runners.length + female200Runners.length + customAthletes.filter(a=>a.gender==="female").length;
+  const mCount = runners100.length + runners200.length;
+const fCount = customAthletes.length;
 
   const filtered = (gender, event) => ({
-    staticList: getStaticByGenderAndEvent(gender, event).filter(r => r.name.toLowerCase().includes(searchTerm.toLowerCase())),
+    staticList: getRunnersByEvent(event).filter(r => r.name.toLowerCase().includes(searchTerm.toLowerCase())),
     customList: customAthletes.filter(a => a.gender===gender && a.event===event && a.name.toLowerCase().includes(searchTerm.toLowerCase())),
   });
 
@@ -65,20 +65,29 @@ const DatabasePage = ({
           )}
         </div>
         <div className={`bg-gradient-to-br ${pbGrad} text-white p-4 rounded-xl text-center mb-4`}>
-          <div className="text-xs opacity-90 mb-1">PERSONAL BEST</div>
-          <div className="text-3xl font-bold">{runner.pb}</div>
+         <div className="text-xs opacity-90 mb-1">RECORDED TIME</div>
+         <div className="text-3xl font-bold">{runner.raceTime}s</div>
           <div className="text-xs opacity-75 mt-1">{event} metres</div>
         </div>
         {!isCustom && (
-          <div className="space-y-2 mb-4">
-            {[["Season Best:", runner.sb],["Olympic Record:", runner.olympicRecord],["National Record:", runner.nationalRecord]].map(([label,val]) => (
-              <div key={label} className="py-1.5 border-b border-gray-100">
-                <div className="font-semibold text-gray-700 text-xs">{label}</div>
-                <div className={`font-semibold text-xs ${event==="100"?"text-red-600":"text-orange-600"}`}>{val}</div>
-              </div>
-            ))}
-          </div>
-        )}
+  <div className="space-y-2 mb-4">
+    {[
+      ["Country:", runner.country],
+      ["Venue:", runner.venue],
+      ["City:", runner.city],
+      ["Wind:", `${runner.wind} m/s`],
+      ["Temperature:", `${runner.temperature}°C`],
+      ["Humidity:", `${runner.humidity}%`],
+      ["Altitude:", `${runner.altitude}m`],
+      ["Year:", runner.year],
+    ].map(([label, val]) => (
+      <div key={label} className="py-1.5 border-b border-gray-100">
+        <div className="font-semibold text-gray-700 text-xs">{label}</div>
+        <div className={`font-semibold text-xs ${event==="100"?"text-red-600":"text-orange-600"}`}>{val}</div>
+      </div>
+    ))}
+  </div>
+)}
         <div className={`p-3 rounded-xl border-2 ${isCustom?"bg-indigo-50 border-indigo-200":"bg-gray-50 border-gray-200"}`}>
           <h4 className="font-bold text-gray-800 mb-2 flex items-center gap-1 text-sm">
             {isCustom ? <UserPlus size={14} className="text-indigo-500"/> : <Award size={14} className="text-yellow-500"/>}
@@ -134,7 +143,7 @@ const DatabasePage = ({
         <NavBar page="database" setCurrentPage={setCurrentPage} mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} customAthleteCount={customAthletes.length}/>
         <div className="bg-white rounded-2xl shadow-lg p-8 mb-6">
           <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
-            <h2 className="text-3xl font-bold text-gray-800">UK Sprinters Database</h2>
+           <h2 className="text-3xl font-bold text-gray-800">International Sprinters Database</h2>
             {customAthletes.length > 0 && (
               <div className="flex items-center gap-2 px-4 py-2 bg-indigo-50 border-2 border-indigo-200 rounded-xl">
                 <UserPlus size={16} className="text-indigo-600"/>
