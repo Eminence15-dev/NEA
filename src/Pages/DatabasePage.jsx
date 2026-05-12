@@ -11,6 +11,7 @@
 // ================================================================
 
 import { Search, Award, UserPlus, Trash2, Database } from "lucide-react";
+import { useState } from "react";
 import { getRunnersByEvent, runners100, runners200 } from "../data/athleteData";
 import { NavBar } from "./HomePage";
 
@@ -31,13 +32,25 @@ const DatabasePage = ({
   customAthletes, removeCustomAthlete,
   setCurrentPage, mobileMenuOpen, setMobileMenuOpen, Toast,
 }) => {
+  const [statusFilter, setStatusFilter] = useState("all"); // all, active, retired, custom
   const mCount = runners100.length + runners200.length;
-const fCount = customAthletes.length;
+  const fCount = customAthletes.length;
 
-  const filtered = (gender, event) => ({
-    staticList: getRunnersByEvent(event).filter(r => r.name.toLowerCase().includes(searchTerm.toLowerCase())),
-    customList: customAthletes.filter(a => a.gender===gender && a.event===event && a.name.toLowerCase().includes(searchTerm.toLowerCase())),
-  });
+  const filtered = (gender, event) => {
+    let staticList = getRunnersByEvent(event).filter(r => r.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    // Apply status filter
+    if (statusFilter === "active") {
+      staticList = staticList.filter(r => r.status === "Active");
+    } else if (statusFilter === "retired") {
+      staticList = staticList.filter(r => r.status === "Retired");
+    } else if (statusFilter === "custom") {
+      staticList = [];
+    }
+    
+    const customList = customAthletes.filter(a => a.gender===gender && a.event===event && a.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    return { staticList, customList };
+  };
 
   const { staticList: static100, customList: custom100 } = filtered(selectedGender, "100");
   const { staticList: static200, customList: custom200 } = filtered(selectedGender, "200");
@@ -56,7 +69,7 @@ const fCount = customAthletes.length;
               {isCustom && <span className="text-xs px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full">✨ Custom</span>}
             </h3>
             <div className="flex items-center gap-2 mt-1">
-              <div className={`w-2 h-2 rounded-full ${runner.status==="Active"?"bg-green-500":runner.status==="Custom"?"bg-indigo-400":"bg-gray-400"}`}/>
+              <div className={`w-2 h-2 rounded-full ${runner.status==="Active"?"bg-green-500":runner.status==="Retired"?"bg-amber-500":"bg-indigo-400"}`}/>
               <p className="text-gray-600 italic text-sm">{runner.status}</p>
             </div>
           </div>
@@ -151,18 +164,29 @@ const fCount = customAthletes.length;
               </div>
             )}
           </div>
-          <div className="flex flex-col md:flex-row gap-3">
-            <div className="flex-1 relative">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={20}/>
-              <input type="text" placeholder="Search athletes across all events…" value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl focus:border-purple-600 outline-none"/>
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col md:flex-row gap-3">
+              <div className="flex-1 relative">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={20}/>
+                <input type="text" placeholder="Search athletes across all events…" value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl focus:border-purple-600 outline-none"/>
+              </div>
+              <div className="flex gap-3">
+                {[["male","Male","bg-blue-600",mCount],["female","Female","bg-pink-600",fCount]].map(([val,label,col,count]) => (
+                  <button key={val} onClick={() => setSelectedGender(val)}
+                    className={`px-6 py-3 rounded-xl font-semibold transition-all ${selectedGender===val?`${col} text-white shadow-lg`:"bg-gray-200 text-gray-700 hover:bg-gray-300"}`}>
+                    {label} ({count})
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="flex gap-3">
-              {[["male","Male","bg-blue-600",mCount],["female","Female","bg-pink-600",fCount]].map(([val,label,col,count]) => (
-                <button key={val} onClick={() => setSelectedGender(val)}
-                  className={`px-6 py-3 rounded-xl font-semibold transition-all ${selectedGender===val?`${col} text-white shadow-lg`:"bg-gray-200 text-gray-700 hover:bg-gray-300"}`}>
-                  {label} ({count})
+            <div className="flex gap-2 flex-wrap">
+              <span className="text-sm font-semibold text-gray-700 flex items-center">Filter by status:</span>
+              {[["all","All","bg-gray-600"],["active","Active","bg-green-600"],["retired","Retired","bg-amber-600"],["custom","Custom","bg-indigo-600"]].map(([val,label,col]) => (
+                <button key={val} onClick={() => setStatusFilter(val)}
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${statusFilter===val?`${col} text-white shadow-md`:"bg-gray-200 text-gray-700 hover:bg-gray-300"}`}>
+                  {label}
                 </button>
               ))}
             </div>
