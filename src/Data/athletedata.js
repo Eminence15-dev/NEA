@@ -16,6 +16,11 @@ export const STORAGE_KEYS = {
   RECENT_SIMULATIONS: "recent-simulations",
 };
 
+export const PB_RANGES = {
+  "100": { min: 9.5,  max: 14.0, label: "9.50s – 14.00s" },
+  "200": { min: 19.0, max: 28.0, label: "19.00s – 28.00s" },
+};
+
 export const TIME_RANGES = {
   "100": { min: 9.5,  max: 14.0, label: "9.50s – 14.00s" },
   "200": { min: 19.0, max: 28.0, label: "19.00s – 28.00s" },
