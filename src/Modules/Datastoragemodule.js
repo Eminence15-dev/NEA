@@ -1,10 +1,41 @@
+// ================================================================
+// MODULE 4: Data Storage Module
+//
+// Handles all persistent storage using Firebase Firestore.
+//
+// Three Firestore collections:
+//   "athletes"           — all static athletes (fetched live)
+//   "custom-athletes"    — user-added custom athletes
+//   "recent-simulations" — last 5 simulation records
+//
+// Fetching athletes from Firestore means the dataset can be
+// updated by re-running upload_to_firestore.py without
+// needing to redeploy the app on Vercel.
+// ================================================================
+
 import { db } from "../firebase";
 import {
-  collection, doc, setDoc,
-  getDocs, deleteDoc
+  collection, doc, setDoc, getDocs,
+  deleteDoc, query, orderBy, limit
 } from "firebase/firestore";
 
-// ── Load ─────────────────────────────────────────────────────────
+// ── Athletes (fetched live from Firestore) ────────────────────────
+
+/**
+ * Loads all static athletes from Firestore.
+ * Falls back to empty array if Firestore is unavailable.
+ */
+export const loadStaticAthletes = async () => {
+  try {
+    const snapshot = await getDocs(collection(db, "athletes"));
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } catch (_) {
+    console.error("Failed to load athletes from Firestore");
+    return [];
+  }
+};
+
+// ── Custom Athletes ───────────────────────────────────────────────
 
 export const loadCustomAthletes = async () => {
   try {
@@ -13,29 +44,41 @@ export const loadCustomAthletes = async () => {
   } catch (_) { return []; }
 };
 
-export const loadRecentSimulations = async () => {
-  try {
-    const snapshot = await getDocs(collection(db, "recent-simulations"));
-    return snapshot.docs.map(doc => doc.data());
-  } catch (_) { return []; }
-};
-
-// ── Save ─────────────────────────────────────────────────────────
-
 export const saveCustomAthletes = async (athletes) => {
   try {
+    // Clear existing custom athletes
+    const existing = await getDocs(collection(db, "custom-athletes"));
+    for (const d of existing.docs) await deleteDoc(d.reference);
+
+    // Upload new list
     for (const athlete of athletes) {
       await setDoc(
-        doc(db, "custom-athletes", `${athlete.name}-${athlete.event}`),
+        doc(db, "custom-athletes", `${athlete.name.replace(/ /g, "_")}-${athlete.event}`),
         athlete
       );
     }
   } catch (_) {}
 };
 
+// ── Recent Simulations ────────────────────────────────────────────
+
+export const loadRecentSimulations = async () => {
+  try {
+    const snapshot = await getDocs(collection(db, "recent-simulations"));
+    return snapshot.docs.map(doc => doc.data())
+      .sort((a, b) => new Date(b.date) - new Date(a.date))
+      .slice(0, 5);
+  } catch (_) { return []; }
+};
+
 export const saveRecentSimulations = async (simulations) => {
   try {
-    for (let i = 0; i < simulations.length; i++) {
+    // Clear existing
+    const existing = await getDocs(collection(db, "recent-simulations"));
+    for (const d of existing.docs) await deleteDoc(d.reference);
+
+    // Save latest 5
+    for (let i = 0; i < Math.min(simulations.length, 5); i++) {
       await setDoc(
         doc(db, "recent-simulations", `sim-${i}`),
         simulations[i]
@@ -44,7 +87,7 @@ export const saveRecentSimulations = async (simulations) => {
   } catch (_) {}
 };
 
-// ── Helpers (keep these — used by RunPredictApp.jsx) ─────────────
+// ── Helpers ───────────────────────────────────────────────────────
 
 export const athleteAlreadyExists = (allAthletes, name, event) =>
   allAthletes.some(
