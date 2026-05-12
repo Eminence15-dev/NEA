@@ -32,9 +32,9 @@ const DatabasePage = ({
   customAthletes, removeCustomAthlete,
   setCurrentPage, mobileMenuOpen, setMobileMenuOpen, Toast,
 }) => {
-  const mCount = runners100.length + runners200.length;
-const fCount = customAthletes.length;
-
+  const allStatic = [...runners100, ...runners200];
+const mCount = allStatic.filter(a => a.gender === "male").length + customAthletes.filter(a => a.gender === "male").length;
+const fCount = allStatic.filter(a => a.gender === "female").length + customAthletes.filter(a => a.gender === "female").length;
   const filtered = (gender, event) => ({
   staticList: getRunnersByEvent(event)
     .filter(r => r.gender === gender && r.name.toLowerCase().includes(searchTerm.toLowerCase())),
@@ -59,7 +59,7 @@ const fCount = customAthletes.length;
               {isCustom && <span className="text-xs px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full">✨ Custom</span>}
             </h3>
             <div className="flex items-center gap-2 mt-1">
-              <div className={`w-2 h-2 rounded-full ${runner.status==="Active"?"bg-green-500":runner.status==="Custom"?"bg-indigo-400":"bg-gray-400"}`}/>
+              <div className={`w-2 h-2 rounded-full ${runner.status==="Active"?"bg-green-500":runner.status==="Retired"?"bg-amber-500":runner.status==="Custom"?"bg-indigo-400":"bg-gray-400"}`}/>
               <p className="text-gray-600 italic text-sm">{runner.status}</p>
             </div>
           </div>

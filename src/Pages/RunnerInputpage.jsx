@@ -137,6 +137,11 @@ const RunnerInputPage = ({
                     <div className="font-semibold text-gray-800 text-sm flex items-center gap-2">
                       {athlete.name}
                       {athlete.custom && <span className="text-xs px-1.5 py-0.5 bg-indigo-100 text-indigo-700 rounded-full">Custom</span>}
+                      {athlete.gender && (
+                        <span className={`text-xs px-1.5 py-0.5 rounded-full font-semibold ${athlete.gender === "male" ? "bg-blue-100 text-blue-700" : "bg-pink-100 text-pink-700"}`}>
+                          {athlete.gender === "male" ? "👨 Male" : "👩 Female"}
+                        </span>
+                      )}
                     </div>
                     <div className="text-xs text-gray-500">
                       {athlete.country} · {athlete.raceTime}s · {athlete.city} ({athlete.year})
