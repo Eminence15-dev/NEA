@@ -27,7 +27,7 @@ import time
 
 # ── Config ────────────────────────────────────────────────────────
 EXCEL_FILE        = "sprint_runners_100m_200m (4).xlsx"
-SERVICE_ACCOUNT   = "runnertime-ef63a-firebase-adminsdk-fbsvc-9fc1fded7a.json"
+SERVICE_ACCOUNT   = r"C:\Users\maxim\Documents\runnertime-ef63a-aa119eb348c3.json"
 COLLECTION_NAME   = "athletes"  # Firestore collection name
 
 # ── Initialise Firebase ───────────────────────────────────────────
