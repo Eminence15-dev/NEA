@@ -11,6 +11,11 @@
 // Fetching athletes from Firestore means the dataset can be
 // updated by re-running upload_to_firestore.py without
 // needing to redeploy the app on Vercel.
+//
+// Fallback Strategy:
+//   If Firestore is unavailable (e.g. no internet connection),
+//   loadStaticAthletes() falls back to the local athleteData.js
+//   dataset so the app remains functional offline.
 // ================================================================
 
 import { db } from "../firebase";
@@ -18,20 +23,26 @@ import {
   collection, doc, setDoc, getDocs,
   deleteDoc, query, orderBy, limit
 } from "firebase/firestore";
+import { getStaticAthletes } from "../data/athleteData";
 
 // ── Athletes (fetched live from Firestore) ────────────────────────
 
 /**
  * Loads all static athletes from Firestore.
- * Falls back to empty array if Firestore is unavailable.
+ * Falls back to local athleteData.js if Firestore is unavailable.
  */
 export const loadStaticAthletes = async () => {
   try {
     const snapshot = await getDocs(collection(db, "athletes"));
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    if (snapshot.docs.length > 0) {
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    }
+    // Firestore returned empty — fall back to local data
+    console.warn("Firestore returned no athletes — using local fallback");
+    return getStaticAthletes();
   } catch (_) {
-    console.error("Failed to load athletes from Firestore");
-    return [];
+    console.error("Failed to load athletes from Firestore — using local fallback");
+    return getStaticAthletes();
   }
 };
 
