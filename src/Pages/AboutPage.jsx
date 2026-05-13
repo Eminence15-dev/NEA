@@ -103,6 +103,14 @@ const AboutPage = ({ setCurrentPage, mobileMenuOpen, setMobileMenuOpen, Toast })
               formula: "humidityMult = 1 − (humidity × 0.00002)",
               desc: "Humid air is slightly less dense than dry air, which marginally reduces drag and benefits sprinters. The effect is small but physically accurate.",
             },
+            {
+              title: "XGBoost ML Correction",
+              color: "text-indigo-600",
+              bg: "from-indigo-50 to-blue-50",
+              border: "border-indigo-200",
+              formula: "Final = physicsTime × 0.70 + xgboostTime × 0.30",
+              desc: "A pre-trained XGBoost model trained on the 151-athlete dataset applies a correction factor on top of the physics prediction. The 70/30 blend favours the physics model due to the limited dataset size — with more data, the XGBoost weighting could be increased.",
+            },
           ].map(({ title, color, bg, border, formula, desc }) => (
             <div key={title} className={`p-5 bg-gradient-to-br ${bg} rounded-xl border ${border}`}>
               <h3 className={`text-lg font-bold ${color} mb-2`}>{title}</h3>
@@ -120,7 +128,7 @@ const AboutPage = ({ setCurrentPage, mobileMenuOpen, setMobileMenuOpen, Toast })
             ["🎯","Multi-Event Simulator",    "from-red-50 to-orange-50",   "border-red-200",   "100m and 200m prediction engine using real race data."],
             ["📊","Data Visualization",       "from-blue-50 to-cyan-50",    "border-blue-200",  "Bar chart, line chart, and radar diagram."],
             ["🗄️","Real Athlete Database",   "from-green-50 to-emerald-50","border-green-200", "151 athletes from international competitions."],
-            ["✨","Auto-Save Athletes",        "from-indigo-50 to-purple-50","border-indigo-200","Unknown athletes saved automatically on simulation."],
+            ["🤖","XGBoost ML Correction",    "from-indigo-50 to-purple-50","border-indigo-200","Physics formula blended with a trained XGBoost model for improved prediction accuracy."],
             ["🌡️","Environmental Analysis",  "from-amber-50 to-yellow-50", "border-amber-200", "Wind, temperature, humidity, altitude conditions."],
             ["⚡","Instant Predictions",       "from-pink-50 to-rose-50",    "border-pink-200",  "Optimistic, realistic, pessimistic scenarios."],
           ].map(([emoji, title, grad, border, desc]) => (

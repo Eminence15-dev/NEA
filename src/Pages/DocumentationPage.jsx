@@ -10,14 +10,6 @@
 
 import { NavBar } from "./HomePage";
 
-/**
- * @param {string}   docsTab       — active tab key ("guide" | "algorithm" | "glossary" | "features")
- * @param {Function} setDocsTab    — switch tab
- * @param {Function} setCurrentPage
- * @param {boolean}  mobileMenuOpen
- * @param {Function} setMobileMenuOpen
- * @param {Function} Toast
- */
 const DocumentationPage = ({ docsTab, setDocsTab, setCurrentPage, mobileMenuOpen, setMobileMenuOpen, Toast }) => {
   const TABS = [
     { key: "guide",     label: "📋 User Guide" },
@@ -89,7 +81,7 @@ const DocumentationPage = ({ docsTab, setDocsTab, setCurrentPage, mobileMenuOpen
             </div>
 
             {/* Factor cards */}
-            <div className="space-y-3">
+            <div className="space-y-3 mb-6">
               {[
                 ["Track Condition",              "text-red-700",  "bg-red-50 border-red-200",
                   "Optimal = 1.000 · Good = 1.002 · Fair = 1.005 · Poor = 1.010",
@@ -115,8 +107,23 @@ const DocumentationPage = ({ docsTab, setDocsTab, setCurrentPage, mobileMenuOpen
               ))}
             </div>
 
-            <div className="mt-5 p-4 bg-amber-50 border-2 border-amber-200 rounded-xl text-sm text-amber-800">
-              <strong>Accuracy note:</strong> This model achieves approximately 70% accuracy (±0.20s) for standard conditions.
+            {/* XGBoost section */}
+            <div className="p-5 bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl border-2 border-indigo-200 mb-5">
+              <div className="font-bold text-indigo-700 text-sm mb-2">🤖 XGBoost Machine Learning Correction</div>
+              <div className="font-mono text-xs text-gray-700 bg-white bg-opacity-70 rounded-lg px-3 py-2 mb-2">
+                Final = physicsTime × 0.70 + xgboostTime × 0.30
+              </div>
+              <p className="text-gray-600 text-sm">
+                Predictions are refined using a pre-trained XGBoost model trained on the 151-athlete dataset.
+                XGBoost learns non-linear relationships between conditions and race time that the physics formula cannot capture.
+                The final prediction blends physics (70%) with XGBoost (30%) — weighted this way because the limited dataset size
+                of 151 records means the physics model is more reliable for extrapolation beyond the training data.
+                With a larger dataset, the XGBoost weighting could be increased for greater accuracy.
+              </p>
+            </div>
+
+            <div className="p-4 bg-amber-50 border-2 border-amber-200 rounded-xl text-sm text-amber-800">
+              <strong>Accuracy note:</strong> The blended model achieves approximately 70% accuracy (±0.20s) for standard conditions.
               It is a simplified educational model — actual performance is also influenced by race strategy, mental state, reaction time, and individual biomechanics.
             </div>
           </div>
@@ -139,6 +146,8 @@ const DocumentationPage = ({ docsTab, setDocsTab, setCurrentPage, mobileMenuOpen
                 ["Pessimistic Prediction", "The predicted time × 1.005 — a worst-case scenario on the day."],
                 ["IAAF Wind Coefficient",  "The official wind correction factor used by World Athletics. Differs between 100m (0.0805) and 200m (0.0405)."],
                 ["Air Density Model",      "An exponential decay formula modelling how atmospheric pressure decreases with altitude."],
+                ["XGBoost",                "Extreme Gradient Boosting — a machine learning algorithm that learns patterns from training data. Used here to apply a correction factor on top of the physics-based prediction."],
+                ["Blended Model",          "The final prediction combines the physics formula (70%) and XGBoost correction (30%) to balance accuracy and generalisability."],
                 ["Custom Athlete",         "An athlete entered by the user not found in the built-in database. Auto-saved on first simulation."],
                 ["Event Separation",       "100m and 200m athletes are stored separately. The same athlete can have independent entries per event."],
               ].map(([term, def]) => (
@@ -157,7 +166,7 @@ const DocumentationPage = ({ docsTab, setDocsTab, setCurrentPage, mobileMenuOpen
             {[
               ["🏠","Module 1 — Homepage / Interface",         "from-orange-50 to-yellow-50","border-orange-200","Dashboard with stat cards, record holders, recent simulations, and quick actions."],
               ["🏃","Module 2 — Runner Input Page",            "from-red-50 to-orange-50",   "border-red-200",   "Simulation form with event selector, athlete search, environmental sliders."],
-              ["⚙️","Module 3 — Simulation Engine",           "from-purple-50 to-indigo-50","border-purple-200","Physics-based calculation module using IAAF wind correction and air density models."],
+              ["⚙️","Module 3 — Simulation Engine",           "from-purple-50 to-indigo-50","border-purple-200","Physics-based multiplier formula blended with XGBoost ML correction for improved accuracy."],
               ["🗄️","Module 4 — Data Storage Module",         "from-green-50 to-teal-50",   "border-green-200", "Persistent storage for custom athletes and session history using window.storage."],
               ["📊","Module 5 — Results / Output Page",       "from-blue-50 to-cyan-50",    "border-blue-200",  "Displays optimistic, predicted, and pessimistic times plus auto-save notifications."],
               ["📈","Module 6 — Graph & Visualization",       "from-pink-50 to-rose-50",    "border-pink-200",  "Bar chart, line chart, radar chart, and factor impact grid via Recharts."],
