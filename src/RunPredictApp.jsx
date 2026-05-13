@@ -129,9 +129,9 @@ const RunPredictApp = () => {
   }
 
   // ── Module 3 + 4: Run simulation ─────────────────────────────────
-  const handleCalculate = () => {
+  const handleCalculate = async () => {
     if (!selectedAthlete) return;
-    const wasAdded = !athleteAlreadyExists(allAthletes, formData.athleteName.trim(), formData.eventDistance);
+    const wasAdded = !(await athleteAlreadyExists(allAthletes, formData.athleteName.trim(), formData.eventDistance));
     if (wasAdded) {
       const newAthlete = {
         name:             formData.athleteName.trim(),

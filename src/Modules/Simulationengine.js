@@ -13,11 +13,12 @@
 // prediction reflects only the CHANGE in conditions, not an
 // absolute value from scratch.
 //
-// Improvements:
-//   - IAAF-standard wind correction (event-specific)
-//   - Exponential air density model for altitude
-//   - Bell-curve temperature model peaking at 26°C
-//   - Humidity air density effect
+// XGBoost Integration:
+//   A pre-trained XGBoost lookup table (public/xgboost_lookup.json)
+//   is used to compute a small correction factor on top of the
+//   physics-based prediction. The two are blended 70/30
+//   (physics / XGBoost) since the physics model is more reliable
+//   given the limited dataset size.
 // ================================================================
 
 // ── Multiplier Constants ─────────────────────────────────────────
@@ -26,6 +27,49 @@ const TRACK_MULTIPLIERS = {
   good:    1.002,
   fair:    1.005,
   poor:    1.010,
+};
+
+// ── XGBoost Lookup Cache ──────────────────────────────────────────
+let xgbLookup = null;
+
+const loadXGBLookup = async () => {
+  if (xgbLookup) return xgbLookup;
+  try {
+    const res  = await fetch("/xgboost_lookup.json");
+    xgbLookup  = await res.json();
+    return xgbLookup;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Finds the nearest key in an array of numeric string keys.
+ */
+const nearestKey = (keys, value) => {
+  const num = parseFloat(value);
+  return keys.reduce((best, k) =>
+    Math.abs(parseFloat(k) - num) < Math.abs(parseFloat(best) - num) ? k : best
+  );
+};
+
+/**
+ * Looks up the XGBoost predicted time for given conditions.
+ * Snaps each condition to the nearest grid value in the lookup table.
+ */
+const xgbPredict = (lookup, event, wind, temp, humidity, altitude, track) => {
+  try {
+    const eventKey = nearestKey(Object.keys(lookup.lookup), event);
+    const windKey  = nearestKey(Object.keys(lookup.lookup[eventKey]), wind);
+    const tempKey  = nearestKey(Object.keys(lookup.lookup[eventKey][windKey]), temp);
+    const humKey   = nearestKey(Object.keys(lookup.lookup[eventKey][windKey][tempKey]), humidity);
+    const altKey   = nearestKey(Object.keys(lookup.lookup[eventKey][windKey][tempKey][humKey]), altitude);
+    const trackMap = lookup.lookup[eventKey][windKey][tempKey][humKey][altKey];
+    const trackKey = trackMap[track] !== undefined ? track : Object.keys(trackMap)[0];
+    return trackMap[trackKey];
+  } catch {
+    return null;
+  }
 };
 
 // ── Core Multiplier Calculation ───────────────────────────────────
@@ -51,7 +95,7 @@ const getMultipliers = (wind, temp, humidity, altitude, event) => {
   const windMult  = 1 - (w * windCoeff * 0.01);
 
   // Exponential air density decay — thinner air at altitude aids sprints
-  const airDensity  = Math.exp(-a / 8500);
+  const airDensity   = Math.exp(-a / 8500);
   const altitudeMult = 0.9 + (airDensity * 0.1);
 
   // Humid air is slightly less dense → marginally faster
@@ -85,26 +129,22 @@ const toPercent = (m) => ((m - 1) * 100).toFixed(3);
 
 /**
  * Runs the full simulation using real race time as baseline.
- *
- * The prediction normalises against the athlete's ORIGINAL race
- * conditions so we only model the change — not recalculate
- * from first principles.
+ * Blends physics-based prediction (70%) with XGBoost correction (30%).
  *
  * @param {Object}  formData  — simulator form inputs
  * @param {Object}  athlete   — selected athlete from database
  * @param {boolean} wasAdded  — whether athlete was auto-saved
- * @returns {Object} results object consumed by ResultsOutputPage
+ * @returns {Promise<Object>} results object consumed by ResultsOutputPage
  */
-export const runSimulation = (formData, athlete, wasAdded) => {
+export const runSimulation = async (formData, athlete, wasAdded) => {
   const raceTime = parseFloat(athlete.raceTime);
 
-  // Multipliers for the NEW (user-set) conditions
+  // ── Physics-based prediction ────────────────────────────────────
   const newMult = calculateMultipliers(formData);
   const newComposite = newMult.trackMult * newMult.windMult
                      * newMult.altitudeMult * newMult.humidityMult
                      * newMult.tempMult;
 
-  // Multipliers for the ORIGINAL recorded race conditions
   const origEnv = getMultipliers(
     athlete.wind, athlete.temperature,
     athlete.humidity, athlete.altitude,
@@ -113,9 +153,43 @@ export const runSimulation = (formData, athlete, wasAdded) => {
   const origComposite = origEnv.windMult * origEnv.altitudeMult
                       * origEnv.humidityMult * origEnv.tempMult;
 
-  // Predicted = raceTime × (new / original) — only change matters
-  const ratio           = newComposite / origComposite;
-  const predictedTime   = raceTime * ratio;
+  const ratio       = newComposite / origComposite;
+  const physicsTime = raceTime * ratio;
+
+  // ── XGBoost correction ──────────────────────────────────────────
+  let predictedTime = physicsTime;
+
+  const lookup = await loadXGBLookup();
+  if (lookup) {
+    const xgbNew = xgbPredict(
+      lookup,
+      formData.eventDistance,
+      formData.tailwind,
+      formData.temperature,
+      formData.humidity,
+      formData.altitude,
+      formData.trackCondition
+    );
+    const xgbOrig = xgbPredict(
+      lookup,
+      athlete.event,
+      athlete.wind,
+      athlete.temperature,
+      athlete.humidity,
+      athlete.altitude,
+      "optimal"
+    );
+
+    if (xgbNew && xgbOrig) {
+      const baseline = lookup.baselines[String(formData.eventDistance)];
+      const xgbRatio = (xgbNew - baseline) / (xgbOrig - baseline || 1);
+      const xgbTime  = raceTime * (1 + (xgbRatio - 1) * 0.3);
+
+      // Blend: 70% physics, 30% XGBoost
+      predictedTime = physicsTime * 0.70 + xgbTime * 0.30;
+    }
+  }
+
   const optimisticTime  = predictedTime * 0.995;
   const pessimisticTime = predictedTime * 1.005;
 
