@@ -21,8 +21,6 @@ import { useState, useEffect } from "react";
 import { UserPlus, Database } from "lucide-react";
 
 // ── Data ──────────────────────────────────────────────────────────
-// Static athletes now loaded from Firestore, not from athleteData.js
-// athleteData.js still needed for STORAGE_KEYS and PB_RANGES
 import { STORAGE_KEYS, PB_RANGES } from "./data/athleteData";
 
 // ── Module 3: Simulation Engine ───────────────────────────────────
@@ -70,6 +68,7 @@ const RunPredictApp = () => {
   const [docsTab,           setDocsTab]           = useState("guide");
   const [mobileMenuOpen,    setMobileMenuOpen]    = useState(false);
   const [loadingAthletes,   setLoadingAthletes]   = useState(true);
+  const [calculating,       setCalculating]       = useState(false);
 
   // Module 2 (RunnerInputPage) form state
   const [formData, setFormData] = useState({
@@ -77,9 +76,9 @@ const RunPredictApp = () => {
     tailwind: "0", fitnessLevel: "85", altitude: "0",
     humidity: "50", temperature: "20", vo2max: "60",
   });
-  const [touched,          setTouched]          = useState({ athleteName: false });
-  const [dropdownOpen,     setDropdownOpen]      = useState(false);
-  const [selectedAthlete,  setSelectedAthlete]   = useState(null);
+  const [touched,         setTouched]         = useState({ athleteName: false });
+  const [dropdownOpen,    setDropdownOpen]     = useState(false);
+  const [selectedAthlete, setSelectedAthlete] = useState(null);
 
   // Database page state
   const [searchTerm,     setSearchTerm]     = useState("");
@@ -131,36 +130,46 @@ const RunPredictApp = () => {
   // ── Module 3 + 4: Run simulation ─────────────────────────────────
   const handleCalculate = async () => {
     if (!selectedAthlete) return;
-    const wasAdded = !(await athleteAlreadyExists(allAthletes, formData.athleteName.trim(), formData.eventDistance));
-    if (wasAdded) {
-      const newAthlete = {
-        name:             formData.athleteName.trim(),
-        country:          "Unknown",
-        event:            formData.eventDistance,
-        raceTime:         selectedAthlete ? selectedAthlete.raceTime : 10.0,
-        wind:             parseFloat(formData.tailwind),
-        altitude:         parseFloat(formData.altitude),
-        temperature:      parseFloat(formData.temperature),
-        humidity:         parseFloat(formData.humidity),
-        venue:            "Unknown",
-        city:             "Unknown",
-        countryOfVenue:   "Unknown",
-        weatherCondition: "Unknown",
-        year:             new Date().getFullYear(),
-        status:           "Custom",
-        custom:           true,
-        achievements:     [`Added automatically on ${new Date().toLocaleDateString()}`],
-        addedDate:        new Date().toLocaleDateString(),
-      };
-      setCustomAthletes(prev => [...prev, newAthlete]);
-      showToast(`✅ ${formData.athleteName} added to the ${formData.eventDistance}m database!`, "success");
+    setCalculating(true);
+
+    try {
+      const wasAdded = !athleteAlreadyExists(allAthletes, formData.athleteName.trim(), formData.eventDistance);
+      if (wasAdded) {
+        const newAthlete = {
+          name:             formData.athleteName.trim(),
+          country:          "Unknown",
+          event:            formData.eventDistance,
+          raceTime:         selectedAthlete ? selectedAthlete.raceTime : 10.0,
+          wind:             parseFloat(formData.tailwind),
+          altitude:         parseFloat(formData.altitude),
+          temperature:      parseFloat(formData.temperature),
+          humidity:         parseFloat(formData.humidity),
+          venue:            "Unknown",
+          city:             "Unknown",
+          countryOfVenue:   "Unknown",
+          weatherCondition: "Unknown",
+          year:             new Date().getFullYear(),
+          status:           "Custom",
+          custom:           true,
+          achievements:     [`Added automatically on ${new Date().toLocaleDateString()}`],
+          addedDate:        new Date().toLocaleDateString(),
+        };
+        setCustomAthletes(prev => [...prev, newAthlete]);
+        showToast(`✅ ${formData.athleteName} added to the ${formData.eventDistance}m database!`, "success");
+      }
+
+      // await required — runSimulation is now async (XGBoost lookup)
+      const results = await runSimulation(formData, selectedAthlete, wasAdded);
+      setSimulationResults(results);
+
+      const entry = buildSimulationEntry(formData, results.predictedTime, wasAdded);
+      setRecentSimulations(prev => [entry, ...prev].slice(0, 5));
+    } catch (err) {
+      console.error("Simulation error:", err);
+      showToast("Something went wrong. Please try again.", "error");
+    } finally {
+      setCalculating(false);
     }
-
-    const results = await runSimulation(formData, selectedAthlete, wasAdded);
-    setSimulationResults(results);
-
-    const entry = buildSimulationEntry(formData, results.predictedTime, wasAdded);
-    setRecentSimulations(prev => [entry, ...prev].slice(0, 5));
   };
 
   // ── Module 4: Remove custom athlete ──────────────────────────────
@@ -196,6 +205,7 @@ const RunPredictApp = () => {
                   touched={touched}   setTouched={setTouched}
                   dropdownOpen={dropdownOpen} setDropdownOpen={setDropdownOpen}
                   onSubmit={handleCalculate}
+                  calculating={calculating}
                 />
               </div>
               {/* Module 5: Results / Output Page */}
@@ -211,7 +221,7 @@ const RunPredictApp = () => {
       return (
         <DatabasePage
           {...navProps}
-          searchTerm={searchTerm}       setSearchTerm={setSearchTerm}
+          searchTerm={searchTerm}         setSearchTerm={setSearchTerm}
           selectedGender={selectedGender} setSelectedGender={setSelectedGender}
           customAthletes={customAthletes}
           removeCustomAthlete={handleRemove}
