@@ -156,7 +156,7 @@ const RunPredictApp = () => {
       showToast(`✅ ${formData.athleteName} added to the ${formData.eventDistance}m database!`, "success");
     }
 
-    const results = runSimulation(formData, selectedAthlete, wasAdded);
+    const results = await runSimulation(formData, selectedAthlete, wasAdded);
     setSimulationResults(results);
 
     const entry = buildSimulationEntry(formData, results.predictedTime, wasAdded);
