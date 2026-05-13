@@ -12,6 +12,12 @@
 // This normalises against the original race conditions so the
 // prediction reflects only the CHANGE in conditions, not an
 // absolute value from scratch.
+//
+// Improvements:
+//   - IAAF-standard wind correction (event-specific)
+//   - Exponential air density model for altitude
+//   - Bell-curve temperature model peaking at 26°C
+//   - Humidity air density effect
 // ================================================================
 
 // ── Multiplier Constants ─────────────────────────────────────────
@@ -28,13 +34,34 @@ const TRACK_MULTIPLIERS = {
  * Calculates condition multipliers for a given set of conditions.
  * Each multiplier is centred around 1.0.
  * > 1.0 = slower,  < 1.0 = faster
+ *
+ * Wind:        IAAF-standard correction, event-specific coefficient
+ * Altitude:    Exponential air density decay model
+ * Temperature: Bell curve peaking at 26°C (sports science optimal)
+ * Humidity:    Humid air is less dense, marginally aids sprinters
  */
-const getMultipliers = (wind, temp, humidity, altitude) => ({
-  windMult:     1 + parseFloat(wind)     * -0.001,
-  altitudeMult: 1 + parseFloat(altitude) * -0.000001,
-  humidityMult: 1 + (parseFloat(humidity) - 50) * 0.00005,
-  tempMult:     1 + Math.abs(parseFloat(temp) - 20) * 0.0002,
-});
+const getMultipliers = (wind, temp, humidity, altitude, event) => {
+  const w = parseFloat(wind);
+  const t = parseFloat(temp);
+  const h = parseFloat(humidity);
+  const a = parseFloat(altitude);
+
+  // IAAF wind correction — tailwind (positive) lowers time
+  const windCoeff = String(event) === "100" ? 0.0805 : 0.0405;
+  const windMult  = 1 - (w * windCoeff * 0.01);
+
+  // Exponential air density decay — thinner air at altitude aids sprints
+  const airDensity  = Math.exp(-a / 8500);
+  const altitudeMult = 0.9 + (airDensity * 0.1);
+
+  // Humid air is slightly less dense → marginally faster
+  const humidityMult = 1 - (h * 0.00002);
+
+  // Bell curve — optimal temp is 26°C, deviation in either direction slows
+  const tempMult = 1 + Math.pow(t - 26, 2) * 0.00015;
+
+  return { windMult, altitudeMult, humidityMult, tempMult };
+};
 
 /**
  * Calculates all multipliers from form data.
@@ -44,7 +71,8 @@ export const calculateMultipliers = (formData) => {
   const trackMult = TRACK_MULTIPLIERS[formData.trackCondition];
   const env       = getMultipliers(
     formData.tailwind, formData.temperature,
-    formData.humidity, formData.altitude
+    formData.humidity, formData.altitude,
+    formData.eventDistance
   );
   return { trackMult, ...env };
 };
@@ -79,16 +107,17 @@ export const runSimulation = (formData, athlete, wasAdded) => {
   // Multipliers for the ORIGINAL recorded race conditions
   const origEnv = getMultipliers(
     athlete.wind, athlete.temperature,
-    athlete.humidity, athlete.altitude
+    athlete.humidity, athlete.altitude,
+    athlete.event
   );
   const origComposite = origEnv.windMult * origEnv.altitudeMult
                       * origEnv.humidityMult * origEnv.tempMult;
 
   // Predicted = raceTime × (new / original) — only change matters
-  const ratio          = newComposite / origComposite;
-  const predictedTime  = raceTime * ratio;
-  const optimisticTime = predictedTime * 0.995;
-  const pessimisticTime= predictedTime * 1.005;
+  const ratio           = newComposite / origComposite;
+  const predictedTime   = raceTime * ratio;
+  const optimisticTime  = predictedTime * 0.995;
+  const pessimisticTime = predictedTime * 1.005;
 
   return {
     predictedTime:    predictedTime.toFixed(2),
@@ -110,15 +139,15 @@ export const runSimulation = (formData, athlete, wasAdded) => {
 
     // Data for Graph & Visualization Module (Module 6)
     chartData: [
-      { name: "Recorded",   time: parseFloat(raceTime.toFixed(2)) },
-      { name: "Optimistic", time: parseFloat(optimisticTime.toFixed(2)) },
-      { name: "Predicted",  time: parseFloat(predictedTime.toFixed(2)) },
-      { name: "Pessimistic",time: parseFloat(pessimisticTime.toFixed(2)) },
+      { name: "Recorded",    time: parseFloat(raceTime.toFixed(2)) },
+      { name: "Optimistic",  time: parseFloat(optimisticTime.toFixed(2)) },
+      { name: "Predicted",   time: parseFloat(predictedTime.toFixed(2)) },
+      { name: "Pessimistic", time: parseFloat(pessimisticTime.toFixed(2)) },
     ],
     lineData: [
-      { condition: "Recorded", time: parseFloat(raceTime.toFixed(2)) },
-      { condition: "Predicted",time: parseFloat(predictedTime.toFixed(2)) },
-      { condition: "Goal",     time: parseFloat((raceTime - 0.1).toFixed(2)) },
+      { condition: "Recorded",  time: parseFloat(raceTime.toFixed(2)) },
+      { condition: "Predicted", time: parseFloat(predictedTime.toFixed(2)) },
+      { condition: "Goal",      time: parseFloat((raceTime - 0.1).toFixed(2)) },
     ],
     radarData: [
       { factor: "VO2 Max",  value: Math.min(parseFloat(formData.vo2max) * 1.2, 100) },
