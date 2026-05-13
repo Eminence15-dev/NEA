@@ -7,18 +7,10 @@
 //              recent simulations, and quick action buttons
 // ================================================================
 
-import { Activity, Database, TrendingUp, Award, Calendar, Menu, X, UserPlus } from "lucide-react";
+import { Activity, Database, TrendingUp, Award, Calendar, Menu, X, UserPlus, Trash2 } from "lucide-react";
 import { runners100, runners200 } from "../data/athleteData";
 
 // ── NavBar ────────────────────────────────────────────────────────
-/**
- * Shared navigation bar displayed on every page.
- * @param {string}   page               - current active page key
- * @param {Function} setCurrentPage     - navigate to a page
- * @param {boolean}  mobileMenuOpen     - mobile menu toggle state
- * @param {Function} setMobileMenuOpen  - toggle mobile menu
- * @param {number}   customAthleteCount - badge count on Database button
- */
 export const NavBar = ({ page, setCurrentPage, mobileMenuOpen, setMobileMenuOpen, customAthleteCount }) => {
   const pages  = ["dashboard", "simulation", "database", "docs", "about"];
   const colors = { dashboard:"bg-orange-600 hover:bg-orange-700", simulation:"bg-red-600 hover:bg-red-700", database:"bg-blue-600 hover:bg-blue-700", docs:"bg-teal-600 hover:bg-teal-700", about:"bg-purple-600 hover:bg-purple-700" };
@@ -67,19 +59,10 @@ export const NavBar = ({ page, setCurrentPage, mobileMenuOpen, setMobileMenuOpen
 };
 
 // ── HomePage (Dashboard) ─────────────────────────────────────────
-/**
- * Dashboard page: stat cards, record holders,
- * recent simulations list, quick action buttons.
- * @param {Function} setCurrentPage
- * @param {Array}    customAthletes
- * @param {Array}    recentSimulations
- * @param {Function} Toast
- */
-const HomePage = ({ setCurrentPage, customAthletes, recentSimulations, Toast, mobileMenuOpen, setMobileMenuOpen }) => {
+const HomePage = ({ setCurrentPage, customAthletes, recentSimulations, onClearSimulations, Toast, mobileMenuOpen, setMobileMenuOpen }) => {
   const totalStatic   = runners100.length + runners200.length;
   const totalAthletes = totalStatic + customAthletes.length;
 
-  // Fastest recorded times from dataset
   const fastest100 = [...runners100].sort((a,b) => a.raceTime - b.raceTime)[0];
   const fastest200 = [...runners200].sort((a,b) => a.raceTime - b.raceTime)[0];
 
@@ -136,7 +119,20 @@ const HomePage = ({ setCurrentPage, customAthletes, recentSimulations, Toast, mo
         {/* Recent Simulations + Quick Actions */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-white rounded-2xl shadow-lg p-8">
-            <h2 className="text-2xl font-bold mb-5 text-gray-800 flex items-center gap-2"><Calendar className="text-purple-600"/>Recent Simulations</h2>
+            {/* Header with clear button */}
+            <div className="flex justify-between items-center mb-5">
+              <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                <Calendar className="text-purple-600"/>Recent Simulations
+              </h2>
+              {recentSimulations.length > 0 && (
+                <button
+                  onClick={onClearSimulations}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors font-semibold"
+                >
+                  <Trash2 size={14}/> Clear
+                </button>
+              )}
+            </div>
             {recentSimulations.length === 0 ? (
               <div className="text-center py-10 text-gray-400">
                 <TrendingUp size={48} className="mx-auto mb-4 opacity-50"/>
@@ -167,7 +163,7 @@ const HomePage = ({ setCurrentPage, customAthletes, recentSimulations, Toast, mo
           <div className="bg-white rounded-2xl shadow-lg p-8">
             <h2 className="text-2xl font-bold mb-5 text-gray-800">⚡ Quick Actions</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <button onClick={() => setCurrentPage("simulation")} className="p-6 bg-gradient-to-br from-red-600 to-orange-600 text-white rounded-xl font-semibold hover:shadow-xl transition-all flex items-center justify-between"><div className="text-left"><div className="text-lg mb-1">Run Simulation</div><div className="text-xs opacity-80">100m, 200m or 400m</div></div><TrendingUp size={32}/></button>
+              <button onClick={() => setCurrentPage("simulation")} className="p-6 bg-gradient-to-br from-red-600 to-orange-600 text-white rounded-xl font-semibold hover:shadow-xl transition-all flex items-center justify-between"><div className="text-left"><div className="text-lg mb-1">Run Simulation</div><div className="text-xs opacity-80">100m or 200m</div></div><TrendingUp size={32}/></button>
               <button onClick={() => setCurrentPage("database")} className="p-6 bg-gradient-to-br from-blue-600 to-cyan-600 text-white rounded-xl font-semibold hover:shadow-xl transition-all flex items-center justify-between"><div className="text-left"><div className="text-lg mb-1">View Database</div><div className="text-xs opacity-80">{totalAthletes} athletes stored</div></div><Database size={32}/></button>
               <div className="md:col-span-2 p-5 bg-indigo-50 rounded-xl border-2 border-indigo-200">
                 <div className="flex items-start gap-3">

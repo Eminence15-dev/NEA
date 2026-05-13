@@ -178,6 +178,13 @@ const RunPredictApp = () => {
     showToast(`${name} removed from database.`, "info");
   };
 
+  // ── Module 4: Clear all recent simulations ────────────────────────
+  const handleClearSimulations = async () => {
+    setRecentSimulations([]);
+    await saveRecentSimulations([]);
+    showToast("Simulations cleared.", "info");
+  };
+
   // ── Toast component bound to current toast state ──────────────────
   const BoundToast = () => <Toast toast={toast}/>;
 
@@ -187,7 +194,7 @@ const RunPredictApp = () => {
   switch (currentPage) {
 
     case "dashboard":
-      return <HomePage {...navProps} customAthletes={customAthletes} recentSimulations={recentSimulations} Toast={BoundToast}/>;
+      return <HomePage {...navProps} customAthletes={customAthletes} recentSimulations={recentSimulations} onClearSimulations={handleClearSimulations} Toast={BoundToast}/>;
 
     case "simulation":
       return (
