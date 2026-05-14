@@ -150,7 +150,16 @@ const HomePage = ({ setCurrentPage, customAthletes, recentSimulations, onClearSi
                           <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-semibold">{sim.event}m</span>
                           {sim.custom && <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-semibold">✨ New</span>}
                         </div>
-                        <div className="text-sm text-gray-600"><span className="font-semibold">Recorded:</span> {sim.pb}s → <span className="font-semibold text-red-600">Predicted:</span> {sim.predicted}s</div>
+                        <div className="text-sm text-gray-600">
+                          <span className="font-semibold">Recorded:</span>{" "}
+                          {sim.pb === "N/A" ? (
+                            <span className="text-blue-600 font-medium">from database</span>
+                          ) : (
+                            `${sim.pb}s`
+                          )}
+                          {" → "}
+                          <span className="font-semibold text-red-600">Predicted:</span> {sim.predicted}s
+                        </div>
                         <div className="text-xs text-gray-500 mt-0.5">{sim.conditions}</div>
                       </div>
                       <div className="text-xs text-gray-500 ml-2">{sim.date}</div>

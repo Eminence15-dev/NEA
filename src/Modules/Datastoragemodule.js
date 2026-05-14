@@ -6,7 +6,6 @@
 // Three Firestore collections:
 //   "athletes"           — all static athletes (fetched live)
 //   "custom-athletes"    — user-added custom athletes
-//   "recent-simulations" — last 5 simulation records
 //
 // Fetching athletes from Firestore means the dataset can be
 // updated by re-running upload_to_firestore.py without
@@ -16,12 +15,15 @@
 //   If Firestore is unavailable (e.g. no internet connection),
 //   loadStaticAthletes() falls back to the local athleteData.js
 //   dataset so the app remains functional offline.
+//
+// Recent Simulations:
+//   Stored in session memory only — cleared on page refresh/close.
 // ================================================================
 
 import { db } from "../firebase";
 import {
   collection, doc, setDoc, getDocs,
-  deleteDoc, query, orderBy, limit
+  deleteDoc
 } from "firebase/firestore";
 import { getStaticAthletes } from "../data/athleteData";
 
@@ -71,31 +73,17 @@ export const saveCustomAthletes = async (athletes) => {
   } catch (_) {}
 };
 
-// ── Recent Simulations ────────────────────────────────────────────
+// ── Recent Simulations (session-only) ────────────────────────────
+// Stored in memory — cleared automatically on page refresh/close.
+
+let _sessionSimulations = [];
 
 export const loadRecentSimulations = async () => {
-  try {
-    const snapshot = await getDocs(collection(db, "recent-simulations"));
-    return snapshot.docs.map(doc => doc.data())
-      .sort((a, b) => new Date(b.date) - new Date(a.date))
-      .slice(0, 5);
-  } catch (_) { return []; }
+  return [..._sessionSimulations];
 };
 
 export const saveRecentSimulations = async (simulations) => {
-  try {
-    // Clear existing
-    const existing = await getDocs(collection(db, "recent-simulations"));
-    for (const d of existing.docs) await deleteDoc(d.reference);
-
-    // Save latest 5
-    for (let i = 0; i < Math.min(simulations.length, 5); i++) {
-      await setDoc(
-        doc(db, "recent-simulations", `sim-${i}`),
-        simulations[i]
-      );
-    }
-  } catch (_) {}
+  _sessionSimulations = simulations.slice(0, 5);
 };
 
 // ── Helpers ───────────────────────────────────────────────────────
