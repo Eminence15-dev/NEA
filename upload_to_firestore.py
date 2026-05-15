@@ -26,7 +26,7 @@ import json
 import time
 
 # ── Config ────────────────────────────────────────────────────────
-EXCEL_FILE        = r"C:\Users\maxim\OneDrive\Pictures\Documents\sprint_runners_100m_200m__4_.xlsx"
+EXCEL_FILE        = r"C:\Users\maxim\NEA\sprint_runners_100m_200m__4_.xlsx"
 SERVICE_ACCOUNT   = r"C:\Users\maxim\Downloads\runnertime-ef63a-firebase-adminsdk-fbsvc-fab08e0276.json" 
 COLLECTION_NAME   = "athletes"  # Firestore collection name
 
