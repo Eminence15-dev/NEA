@@ -3,10 +3,11 @@
 // ================================================================
 
 import { useState, useEffect } from "react";
-import { UserPlus, Database } from "lucide-react";
+import { UserPlus, Database, MapPin } from "lucide-react";
 
 import { STORAGE_KEYS, PB_RANGES } from "./data/athleteData";
 import { runSimulation } from "./modules/SimulationEngine";
+import { findSimilarRuns, buildComparisonReports, calculatePercentile } from "./modules/HistoricalComparisonModule";
 import {
   loadCustomAthletes, loadRecentSimulations,
   saveCustomAthletes, saveRecentSimulations,
@@ -14,13 +15,15 @@ import {
   removeCustomAthlete, buildSimulationEntry,
 } from "./modules/DataStorageModule";
 
-import HomePage          from "./pages/HomePage";
-import RunnerInputPage   from "./pages/RunnerInputPage";
-import ResultsOutputPage from "./pages/ResultsOutputPage";
-import DatabasePage      from "./pages/DatabasePage";
-import DocumentationPage from "./pages/DocumentationPage";
-import AboutPage         from "./pages/AboutPage";
-import { NavBar }        from "./pages/HomePage";
+import HomePage               from "./pages/HomePage";
+import RunnerInputPage        from "./pages/RunnerInputPage";
+import ResultsOutputPage      from "./pages/ResultsOutputPage";
+import DatabasePage          from "./pages/DatabasePage";
+import DocumentationPage      from "./pages/DocumentationPage";
+import AboutPage             from "./pages/AboutPage";
+import LocationInputPage      from "./pages/LocationInputPage";
+import HistoricalComparisonPage from "./pages/HistoricalComparisonPage";
+import { NavBar }            from "./pages/HomePage";
 
 // ── Toast ─────────────────────────────────────────────────────────
 const Toast = ({ toast }) => !toast ? null : (
@@ -70,6 +73,11 @@ const RunPredictApp = () => {
   const [selectedAthlete, setSelectedAthlete] = useState(null);
   const [searchTerm,      setSearchTerm]      = useState("");
   const [selectedGender,  setSelectedGender]  = useState("male");
+
+  // ── Environment Detection & Comparison ────────────────────────────
+  const [currentEnvironment,  setCurrentEnvironment]  = useState(null);
+  const [comparisonReports,   setComparisonReports]   = useState(null);
+  const [percentileRanking,   setPercentileRanking]   = useState(null);
 
   // ── Load from Firestore ───────────────────────────────────────────
   useEffect(() => {
@@ -134,6 +142,49 @@ const RunPredictApp = () => {
       setSimulationResults(results);
       const entry = buildSimulationEntry(formData, results.predictedTime, wasAdded);
       setRecentSimulations(prev => [entry, ...prev].slice(0, 5));
+
+      // ===== NEW: Historical Comparison =====
+      if (allAthletes.length > 0) {
+        const similarAthletes = findSimilarRuns(
+          allAthletes,
+          {
+            temperature: parseFloat(formData.temperature),
+            humidity: parseFloat(formData.humidity),
+            windSpeed: parseFloat(formData.tailwind),
+            altitude: parseFloat(formData.altitude),
+            trackCondition: formData.trackCondition,
+          },
+          formData.eventDistance,
+          5 // Show top 5 similar runs
+        );
+
+        // Build detailed comparison reports
+        if (similarAthletes.length > 0) {
+          const reports = buildComparisonReports(
+            {
+              temperature: parseFloat(formData.temperature),
+              humidity: parseFloat(formData.humidity),
+              windSpeed: parseFloat(formData.tailwind),
+              altitude: parseFloat(formData.altitude),
+              trackCondition: formData.trackCondition,
+            },
+            similarAthletes,
+            results.predictedTime
+          );
+          setComparisonReports(reports);
+
+          // Calculate percentile ranking
+          const percentile = calculatePercentile(
+            results.predictedTime,
+            allAthletes,
+            formData.eventDistance
+          );
+          setPercentileRanking(percentile);
+        }
+      }
+      // ===== END: Historical Comparison =====
+
+      setCurrentPage("simulation");
     } catch (err) {
       console.error("Simulation error:", err);
       showToast("Something went wrong. Please try again.", "error");
@@ -170,6 +221,55 @@ const RunPredictApp = () => {
 
   switch (currentPage) {
 
+    // ===== NEW: Location Input Page =====
+    case "location-input":
+      return pageWrap(
+        <LocationInputPage
+          formData={formData}
+          setFormData={setFormData}
+          darkMode={darkMode}
+          onEnvironmentDetected={(data) => {
+            setCurrentEnvironment(data);
+            // Auto-populate fields from detected environment
+            setFormData(prev => ({
+              ...prev,
+              altitude: String(data.environment.conditions.altitude),
+              temperature: String(Math.round(data.environment.conditions.temperature)),
+              humidity: String(Math.round(data.environment.conditions.humidity)),
+              tailwind: String(Math.round(data.environment.conditions.tailwind * 100) / 100),
+            }));
+            setCurrentPage("simulation");
+          }}
+          onSkip={() => {
+            setCurrentPage("simulation");
+          }}
+          loading={calculating}
+        />
+      );
+
+    // ===== NEW: Historical Comparison Page =====
+    case "comparison":
+      return pageWrap(
+        <>
+          <HistoricalComparisonPage
+            comparisonReports={comparisonReports}
+            darkMode={darkMode}
+          />
+          <div className="flex justify-center py-8">
+            <button
+              onClick={() => setCurrentPage("simulation")}
+              className={`px-8 py-3 rounded-lg font-semibold transition-all ${
+                darkMode 
+                  ? "bg-[#b19149] text-black hover:bg-[#d4a574]" 
+                  : "bg-[#0b74de] text-white hover:bg-[#0859a1]"
+              }`}
+            >
+              ← Back to Results
+            </button>
+          </div>
+        </>
+      );
+
     // HomePage has its own NavBar internally
     case "dashboard":
       return <HomePage {...navProps} customAthletes={customAthletes} recentSimulations={recentSimulations} onClearSimulations={handleClearSimulations} Toast={BoundToast}/>;
@@ -188,7 +288,14 @@ const RunPredictApp = () => {
             />
           </div>
           <div className="lg:col-span-3">
-            <ResultsOutputPage simulationResults={simulationResults} athleteName={formData.athleteName} darkMode={darkMode}/>
+            <ResultsOutputPage 
+              simulationResults={simulationResults} 
+              athleteName={formData.athleteName} 
+              darkMode={darkMode}
+              comparisonReports={comparisonReports}
+              percentileRanking={percentileRanking}
+              onViewComparison={() => setCurrentPage("comparison")}
+            />
           </div>
         </div>
       );

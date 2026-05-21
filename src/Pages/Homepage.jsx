@@ -2,23 +2,24 @@
 // MODULE 1: Homepage / Interface
 // ================================================================
 
-import { Activity, Database, TrendingUp, Award, Calendar, Menu, X, UserPlus, Trash2, Sun, Moon } from "lucide-react";
+import { Activity, Database, TrendingUp, Award, Calendar, Menu, X, UserPlus, Trash2, Sun, Moon, MapPin } from "lucide-react";
 import { runners100, runners200 } from "../data/athleteData";
 
 const NAV_COLORS = {
-  dashboard:  "bg-[#B83E18] hover:bg-[#8F2E0E]",
-  simulation: "bg-[#B83E18] hover:bg-[#8F2E0E]",
-  database:   "bg-[#1A3FA0] hover:bg-[#162F7A]",
-  docs:       "bg-[#1A3FA0] hover:bg-[#3A6BC8]",
-  about:      "bg-[#162F7A] hover:bg-[#1A3FA0]",
+  dashboard:       "bg-[#B83E18] hover:bg-[#8F2E0E]",
+  "location-input": "bg-[#16A34A] hover:bg-[#15803D]",
+  simulation:      "bg-[#B83E18] hover:bg-[#8F2E0E]",
+  database:        "bg-[#1A3FA0] hover:bg-[#162F7A]",
+  docs:            "bg-[#1A3FA0] hover:bg-[#3A6BC8]",
+  about:           "bg-[#162F7A] hover:bg-[#1A3FA0]",
 };
 
-const NAV_LABELS = { dashboard:"Dashboard", simulation:"Simulator", database:"Database", docs:"Help", about:"About" };
-const NAV_ICONS  = { dashboard:<Activity size={18}/>, simulation:<TrendingUp size={18}/>, database:<Database size={18}/>, docs:<Activity size={18}/>, about:<Activity size={18}/> };
+const NAV_LABELS = { dashboard:"Dashboard", "location-input":"🌍 Detect Environment", simulation:"Simulator", database:"Database", docs:"Help", about:"About" };
+const NAV_ICONS  = { dashboard:<Activity size={18}/>, "location-input":<MapPin size={18}/>, simulation:<TrendingUp size={18}/>, database:<Database size={18}/>, docs:<Activity size={18}/>, about:<Activity size={18}/> };
 
 // ── NavBar ────────────────────────────────────────────────────────
 export const NavBar = ({ page, setCurrentPage, mobileMenuOpen, setMobileMenuOpen, customAthleteCount, darkMode, toggleDarkMode }) => {
-  const pages = ["dashboard", "simulation", "database", "docs", "about"];
+  const pages = ["dashboard", "location-input", "simulation", "database", "docs", "about"];
   const dm = darkMode;
 
   return (
