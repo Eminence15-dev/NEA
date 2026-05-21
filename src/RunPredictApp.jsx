@@ -159,7 +159,7 @@ const RunPredictApp = () => {
   // ── Page Router ───────────────────────────────────────────────────
   // pageWrap: used for pages that don't have their own NavBar
   const pageWrap = (children) => (
-    <div className={`min-h-screen p-5 ${darkMode ? "bg-[#1E2A3A]" : "bg-gray-100"}`}>
+    <div className={`min-h-screen p-5 ${darkMode ? "bg-[#050505]" : "bg-gray-100"}`}>
       <BoundToast/>
       <div className="max-w-7xl mx-auto">
         <NavBar page={currentPage} {...navProps} customAthleteCount={customAthletes.length}/>
