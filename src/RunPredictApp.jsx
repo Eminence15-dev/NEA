@@ -39,7 +39,7 @@ const RunPredictApp = () => {
   // ── Dark mode ─────────────────────────────────────────────────────
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem("runpredict-theme");
-    return saved ? saved === "dark" : true; // default to dark
+    return saved ? saved === "dark" : true;
   });
 
   useEffect(() => {
@@ -157,6 +157,7 @@ const RunPredictApp = () => {
   const navProps = { setCurrentPage, mobileMenuOpen, setMobileMenuOpen, darkMode, toggleDarkMode };
 
   // ── Page Router ───────────────────────────────────────────────────
+  // pageWrap: used for pages that don't have their own NavBar
   const pageWrap = (children) => (
     <div className={`min-h-screen p-5 ${darkMode ? "bg-[#1E2A3A]" : "bg-gray-100"}`}>
       <BoundToast/>
@@ -169,9 +170,11 @@ const RunPredictApp = () => {
 
   switch (currentPage) {
 
+    // HomePage has its own NavBar internally
     case "dashboard":
       return <HomePage {...navProps} customAthletes={customAthletes} recentSimulations={recentSimulations} onClearSimulations={handleClearSimulations} Toast={BoundToast}/>;
 
+    // simulation uses pageWrap NavBar — no NavBar inside RunnerInputPage/ResultsOutputPage
     case "simulation":
       return pageWrap(
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
@@ -190,17 +193,20 @@ const RunPredictApp = () => {
         </div>
       );
 
+    // ✅ FIX 1: DatabasePage has its own NavBar removed — pageWrap provides it
+    // ✅ FIX 2: toggleDarkMode now passed so the toggle button works
     case "database":
       return pageWrap(
         <DatabasePage
           searchTerm={searchTerm} setSearchTerm={setSearchTerm}
           selectedGender={selectedGender} setSelectedGender={setSelectedGender}
           customAthletes={customAthletes} removeCustomAthlete={handleRemove}
-          Toast={BoundToast} darkMode={darkMode}
+          Toast={BoundToast} darkMode={darkMode} toggleDarkMode={toggleDarkMode}
           setCurrentPage={setCurrentPage} mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen}
         />
       );
 
+    // docs and about have their own NavBar internally
     case "docs":
       return <DocumentationPage {...navProps} docsTab={docsTab} setDocsTab={setDocsTab} Toast={BoundToast} darkMode={darkMode}/>;
 
