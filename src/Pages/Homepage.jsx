@@ -19,23 +19,24 @@ const NAV_ICONS  = { dashboard:<Activity size={18}/>, simulation:<TrendingUp siz
 // ── NavBar ────────────────────────────────────────────────────────
 export const NavBar = ({ page, setCurrentPage, mobileMenuOpen, setMobileMenuOpen, customAthleteCount, darkMode, toggleDarkMode }) => {
   const pages = ["dashboard", "simulation", "database", "docs", "about"];
+  const dm = darkMode;
 
   return (
-    <div className="bg-[#050505]/95 border border-[#b19149]/20 rounded-2xl shadow-[0_20px_80px_rgba(0,0,0,0.35)] p-6 mb-6">
+    <div className={`${dm ? 'bg-[#050505]/95 border border-[#b19149]/20 rounded-2xl shadow-[0_20px_80px_rgba(0,0,0,0.35)] p-6 mb-6' : 'bg-white border border-gray-200 rounded-2xl shadow p-6 mb-6'}`}>
       <div className="flex justify-between items-center">
         {/* Logo */}
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-[#B83E18] flex items-center justify-center text-xl">🏃</div>
           <div>
-            <h1 className="text-2xl font-bold text-[#f8d06b]">RunPredict</h1>
-            <p className="text-sm text-[#a78b3c]">Performance Prediction Platform</p>
+            <h1 className={`text-2xl font-bold ${dm? 'text-[#f8d06b]' : 'text-black'}`}>RunPredict</h1>
+            <p className={`text-sm ${dm? 'text-[#a78b3c]' : 'text-gray-600'}`}>Performance Prediction Platform</p>
           </div>
         </div>
         {/* Desktop nav */}
         <div className="hidden md:flex gap-3 flex-wrap items-center">
           {pages.filter(p => p !== page).map(p => (
             <button key={p} onClick={() => setCurrentPage(p)}
-              className="px-5 py-2 border border-[#b19149]/20 text-[#f2d05d] rounded-lg font-semibold transition-colors flex items-center gap-2 hover:bg-[#b19149]/10">
+              className={`px-5 py-2 rounded-lg font-semibold transition-colors flex items-center gap-2 ${dm ? "border border-[#b19149]/20 text-[#f2d05d] hover:bg-[#b19149]/10" : "border border-[#0b74de]/20 bg-[#0b74de]/10 text-[#0b74de] hover:bg-[#0b74de]/20"}`}>
               {NAV_ICONS[p]}{NAV_LABELS[p]}
               {p === "database" && customAthleteCount > 0 && (
                 <span className="bg-white text-[#1A3FA0] text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
@@ -48,10 +49,10 @@ export const NavBar = ({ page, setCurrentPage, mobileMenuOpen, setMobileMenuOpen
           {/* Dark/light toggle */}
           <button
             onClick={toggleDarkMode}
-            className={`p-2.5 rounded-lg transition-colors ${darkMode ? "bg-white/10 hover:bg-white/20 text-[#C4D0EF]" : "bg-gray-100 hover:bg-gray-200 text-gray-600"}`}
-            title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+            className={`p-2.5 rounded-lg transition-colors ${dm ? "bg-white/10 hover:bg-white/20 text-[#C4D0EF]" : "bg-gray-100 hover:bg-gray-200 text-gray-600"}`}
+            title={dm ? "Switch to light mode" : "Switch to dark mode"}
           >
-            {darkMode ? <Sun size={18}/> : <Moon size={18}/>}
+            {dm ? <Sun size={18}/> : <Moon size={18}/>}
           </button>
         </div>
 
@@ -66,12 +67,12 @@ export const NavBar = ({ page, setCurrentPage, mobileMenuOpen, setMobileMenuOpen
         <div className="md:hidden mt-4 flex flex-col gap-2">
           {pages.map(p => (
             <button key={p} onClick={() => { setCurrentPage(p); setMobileMenuOpen(false); }}
-              className="px-5 py-2 border border-[#b19149]/20 text-[#f2d05d] rounded-lg font-semibold hover:bg-[#b19149]/10">
+              className={`px-5 py-2 rounded-lg font-semibold transition-colors ${dm ? "border border-[#b19149]/20 text-[#f2d05d] hover:bg-[#b19149]/10" : "border border-[#0b74de]/20 bg-[#0b74de]/10 text-[#0b74de] hover:bg-[#0b74de]/20"}`}>
               {NAV_LABELS[p]}
             </button>
           ))}
           <button onClick={toggleDarkMode}
-            className="px-5 py-2 rounded-lg font-semibold flex items-center gap-2 bg-[#0f0f0f] text-[#f2d05d] hover:bg-[#1d1d1d]">
+            className={`px-5 py-2 rounded-lg font-semibold flex items-center gap-2 ${dm ? "bg-[#0f0f0f] text-[#f2d05d] hover:bg-[#1d1d1d]" : "bg-[#0b74de]/10 text-[#0b74de] hover:bg-[#0b74de]/20 border border-[#0b74de]/20"}`}>
             {darkMode ? <><Sun size={16}/>Light Mode</> : <><Moon size={16}/>Dark Mode</>}
           </button>
         </div>
@@ -97,15 +98,15 @@ const HomePage = ({ setCurrentPage, customAthletes, recentSimulations, onClearSi
     { label:"100m World Record", val:`${fastest100?.raceTime}s`,sub:fastest100?.name || "",  from:"from-[#8F2E0E]", to:"to-[#4A1505]" },
   ];
 
-  const card  = "bg-[#080808] border border-[#b19149]/20";
-  const text  = "text-[#f8d06b]";
-  const muted = "text-[#a78b3c]";
-  const sub   = "text-[#8f7d45]";
+  const card  = dm ? "bg-[#080808]" : "bg-white border border-gray-200";
+  const text  = dm ? "text-[#f8d06b]" : "text-black";
+  const muted = dm ? "text-[#a78b3c]" : "text-gray-600";
+  const sub   = dm ? "text-[#8f7d45]" : "text-gray-500";
 
   return (
-    <div className="min-h-screen bg-[#090909] p-5">
+    <div className={`min-h-screen ${dm? 'bg-black' : 'bg-white'} p-5`}>
       <Toast/>
-      <div className="max-w-7xl mx-auto rounded-[2rem] border border-[#b19149]/20 bg-[#080808] shadow-[0_15px_60px_rgba(177,145,73,0.18)]">
+      <div className={`max-w-7xl mx-auto rounded-[2rem] ${card} ${dm? 'shadow-[0_15px_60px_rgba(177,145,73,0.18)]' : 'shadow'}`}>
         <NavBar page="dashboard" setCurrentPage={setCurrentPage} mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} customAthleteCount={customAthletes.length} darkMode={darkMode} toggleDarkMode={toggleDarkMode}/>
 
         {/* Stat Cards */}
@@ -125,7 +126,7 @@ const HomePage = ({ setCurrentPage, customAthletes, recentSimulations, onClearSi
         {/* Fastest Athletes */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           {[
-            { title:"Fastest 100m in Dataset", runner:fastest100, accent:"#B83E18", bg: "#0f0f0f", bgStyle: "rgba(184,62,24,0.12)" },
+            { title:"Fastest 100m in Dataset", runner:fastest100, accent:"#d6b451", bg: "#0f0f0f", bgStyle: "rgba(214,180,81,0.12)" },
             { title:"Fastest 200m in Dataset", runner:fastest200, accent:"#d6b451", bg: "#0f0f0f", bgStyle: "rgba(255,209,87,0.12)" },
           ].map(({ title, runner, accent, bgStyle }) => runner && (
             <div key={title} className={`${card} rounded-2xl shadow-md p-8`}>
