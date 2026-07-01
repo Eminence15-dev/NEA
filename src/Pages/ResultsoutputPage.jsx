@@ -2,10 +2,10 @@
 // MODULE 5: Results / Output Page
 // ================================================================
 
-import { TrendingUp, AlertTriangle, UserPlus, Award } from "lucide-react";
+import { TrendingUp, AlertTriangle, UserPlus, Award, Sparkles } from "lucide-react";
 import GraphVisualizationModule from "../components/GraphVisualizationModule";
 
-const ResultsOutputPage = ({ simulationResults, athleteName, darkMode, comparisonReports, percentileRanking, onViewComparison }) => {
+const ResultsOutputPage = ({ simulationResults, athleteName, darkMode, comparisonReports, percentileRanking, onViewComparison, runnerInsights, runnerAuthenticated, runnerName }) => {
   const dm = darkMode;
   const card = dm ? "bg-[#090909] border border-[#b19149]/20" : "bg-white border border-gray-200";
   const text = dm ? "text-[#f8d06b]" : "text-black";
@@ -73,6 +73,31 @@ const ResultsOutputPage = ({ simulationResults, athleteName, darkMode, compariso
       </div>
 
       <GraphVisualizationModule simulationResults={simulationResults}/>
+
+      {runnerAuthenticated && runnerInsights && (
+        <div className={`${dm? 'bg-[#090909] border border-[#b19149]/15 rounded-2xl shadow-[0_25px_70px_rgba(0,0,0,0.35)] p-8' : 'bg-white border border-gray-100 rounded-2xl shadow p-8'}`}>
+          <h3 className={`text-xl font-bold mb-4 ${text} flex items-center gap-2`}>
+            <Sparkles size={20} />
+            Runner coaching insight
+          </h3>
+          <div className={`p-4 rounded-lg ${dm? 'bg-[#b19149]/10 border border-[#b19149]/30' : 'bg-blue-50 border border-blue-200'}`}>
+            <p className={`text-sm font-semibold ${dm? 'text-[#f8d06b]' : 'text-[#0b74de]'}`}>
+              {runnerName || "Runner"}, {runnerInsights.summary}
+            </p>
+            <div className="mt-4 space-y-3">
+              {runnerInsights.suggestions.map((suggestion, idx) => (
+                <div key={idx} className={`p-3 rounded-lg border ${dm? 'bg-[#0f0f0f] border-[#b19149]/20' : 'bg-white border-gray-200'}`}>
+                  <div className={`font-semibold ${text}`}>{suggestion.title}</div>
+                  <p className={`text-sm mt-1 ${muted}`}>{suggestion.detail}</p>
+                </div>
+              ))}
+            </div>
+            <p className={`text-xs mt-3 ${muted}`}>
+              Advice source: {runnerInsights.source === "llm" ? "LLM coaching summary" : "rule-based conditioning model"}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* ===== NEW: Percentile Ranking ===== */}
       {percentileRanking && (

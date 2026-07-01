@@ -14,6 +14,7 @@ import {
   loadStaticAthletes, athleteAlreadyExists,
   removeCustomAthlete, buildSimulationEntry,
 } from "./modules/DataStorageModule";
+import { normalizeRunnerInput, generateRunnerAdvice } from "./modules/RunnerInsightsModule";
 
 import HomePage               from "./pages/HomePage";
 import RunnerInputPage        from "./pages/RunnerInputPage";
@@ -67,6 +68,12 @@ const RunPredictApp = () => {
     athleteName: "", eventDistance: "100", trackCondition: "optimal",
     tailwind: "0", fitnessLevel: "85", altitude: "0",
     humidity: "50", temperature: "20", vo2max: "60",
+    runnerName: localStorage.getItem("runpredict-runner-profile") || "",
+    runnerTime: "",
+    runnerLocation: "",
+    runnerDate: "",
+    runnerPerformance: "steady",
+    runnerNotes: "",
   });
   const [touched,         setTouched]         = useState({ athleteName: false });
   const [dropdownOpen,    setDropdownOpen]     = useState(false);
@@ -78,6 +85,16 @@ const RunPredictApp = () => {
   const [currentEnvironment,  setCurrentEnvironment]  = useState(null);
   const [comparisonReports,   setComparisonReports]   = useState(null);
   const [percentileRanking,   setPercentileRanking]   = useState(null);
+  const [runnerInsights,       setRunnerInsights]       = useState(null);
+  const [runnerHistory,        setRunnerHistory]        = useState(() => {
+    try {
+      const saved = localStorage.getItem("runpredict-runner-history");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [runnerAuthenticated,  setRunnerAuthenticated]  = useState(() => Boolean(localStorage.getItem("runpredict-runner-profile")));
 
   // ── Load from Firestore ───────────────────────────────────────────
   useEffect(() => {
@@ -96,6 +113,17 @@ const RunPredictApp = () => {
 
   useEffect(() => { saveCustomAthletes(customAthletes); },       [customAthletes]);
   useEffect(() => { saveRecentSimulations(recentSimulations); }, [recentSimulations]);
+  useEffect(() => {
+    try {
+      localStorage.setItem("runpredict-runner-history", JSON.stringify(runnerHistory));
+    } catch {}
+  }, [runnerHistory]);
+  useEffect(() => {
+    if (formData.runnerName.trim()) {
+      localStorage.setItem("runpredict-runner-profile", formData.runnerName.trim());
+      setRunnerAuthenticated(true);
+    }
+  }, [formData.runnerName]);
 
   const showToast = (message, type = "success") => {
     setToast({ message, type });
@@ -142,6 +170,26 @@ const RunPredictApp = () => {
       setSimulationResults(results);
       const entry = buildSimulationEntry(formData, results.predictedTime, wasAdded);
       setRecentSimulations(prev => [entry, ...prev].slice(0, 5));
+
+      const normalizedInput = normalizeRunnerInput(formData, selectedAthlete, results);
+      const insights = await generateRunnerAdvice(normalizedInput, runnerHistory);
+      setRunnerInsights(insights);
+      setRunnerHistory(prev => {
+        const nextEntry = {
+          ...normalizedInput,
+          predictedTime: results.predictedTime,
+          createdAt: new Date().toISOString(),
+        };
+        const next = [nextEntry, ...prev].slice(0, 8);
+        try {
+          localStorage.setItem("runpredict-runner-history", JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+      if (formData.runnerName.trim()) {
+        localStorage.setItem("runpredict-runner-profile", formData.runnerName.trim());
+        setRunnerAuthenticated(true);
+      }
 
       // ===== NEW: Historical Comparison =====
       if (allAthletes.length > 0) {
@@ -295,6 +343,9 @@ const RunPredictApp = () => {
               comparisonReports={comparisonReports}
               percentileRanking={percentileRanking}
               onViewComparison={() => setCurrentPage("comparison")}
+              runnerInsights={runnerInsights}
+              runnerAuthenticated={runnerAuthenticated}
+              runnerName={formData.runnerName}
             />
           </div>
         </div>

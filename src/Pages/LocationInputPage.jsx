@@ -28,7 +28,7 @@ const LocationInputPage = ({
   const [runDetails, setRunDetails] = useState({
     raceTime: formData.raceTime || "",
     raceDate: new Date().toISOString().split("T")[0],
-    raceTime: new Date().toTimeString().slice(0, 5),
+    raceClockTime: new Date().toTimeString().slice(0, 5),
   });
 
   const card = dm ? "bg-[#090909] border border-[#b19149]/20" : "bg-white border border-gray-200";
