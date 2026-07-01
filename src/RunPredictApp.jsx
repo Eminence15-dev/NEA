@@ -15,6 +15,7 @@ import {
   removeCustomAthlete, buildSimulationEntry,
 } from "./modules/DataStorageModule";
 import { normalizeRunnerInput, generateRunnerAdvice } from "./modules/RunnerInsightsModule";
+import { initAuthListener, signIn, signUp, signOut } from "./modules/AuthModule";
 
 import HomePage               from "./pages/HomePage";
 import RunnerInputPage        from "./pages/RunnerInputPage";
@@ -24,6 +25,7 @@ import DocumentationPage      from "./pages/DocumentationPage";
 import AboutPage             from "./pages/AboutPage";
 import LocationInputPage      from "./pages/LocationInputPage";
 import HistoricalComparisonPage from "./pages/HistoricalComparisonPage";
+import AuthPage               from "./pages/AuthPage";
 import { NavBar }            from "./pages/HomePage";
 
 // ── Toast ─────────────────────────────────────────────────────────
@@ -53,7 +55,7 @@ const RunPredictApp = () => {
   const toggleDarkMode = () => setDarkMode(prev => !prev);
 
   // ── Shared State ─────────────────────────────────────────────────
-  const [currentPage,       setCurrentPage]       = useState("dashboard");
+  const [currentPage,       setCurrentPage]       = useState("auth");
   const [simulationResults, setSimulationResults] = useState(null);
   const [customAthletes,    setCustomAthletes]    = useState([]);
   const [staticAthletes,    setStaticAthletes]    = useState([]);
@@ -63,6 +65,8 @@ const RunPredictApp = () => {
   const [mobileMenuOpen,    setMobileMenuOpen]    = useState(false);
   const [loadingAthletes,   setLoadingAthletes]   = useState(true);
   const [calculating,       setCalculating]       = useState(false);
+  const [authUser,          setAuthUser]          = useState(null);
+  const [authError,         setAuthError]         = useState("");
 
   const [formData, setFormData] = useState({
     athleteName: "", eventDistance: "100", trackCondition: "optimal",
@@ -109,6 +113,15 @@ const RunPredictApp = () => {
       setLoadingAthletes(false);
     };
     load();
+
+    const unsubscribe = initAuthListener(user => {
+      setAuthUser(user);
+      if (!user) {
+        setCurrentPage("auth");
+      }
+    });
+
+    return () => unsubscribe && unsubscribe();
   }, []);
 
   useEffect(() => { saveCustomAthletes(customAthletes); },       [customAthletes]);
@@ -128,6 +141,37 @@ const RunPredictApp = () => {
   const showToast = (message, type = "success") => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3500);
+  };
+
+  const handleSignIn = async (email, password) => {
+    setAuthError("");
+    try {
+      await signIn(email, password);
+      setCurrentPage("dashboard");
+    } catch (error) {
+      setAuthError(error.message || "Sign in failed.");
+    }
+  };
+
+  const handleSignUp = async (email, password) => {
+    setAuthError("");
+    try {
+      await signUp(email, password);
+      setCurrentPage("dashboard");
+    } catch (error) {
+      setAuthError(error.message || "Sign up failed.");
+    }
+  };
+
+  const handleSignOut = async () => {
+    setAuthError("");
+    try {
+      await signOut();
+      setAuthUser(null);
+      setCurrentPage("auth");
+    } catch (error) {
+      setAuthError(error.message || "Sign out failed.");
+    }
   };
 
   const allAthletes = [...staticAthletes, ...customAthletes];
@@ -268,6 +312,18 @@ const RunPredictApp = () => {
   );
 
   switch (currentPage) {
+    case "auth":
+      return (
+        <AuthPage
+          authUser={authUser}
+          onSignIn={handleSignIn}
+          onSignUp={handleSignUp}
+          onSignOut={handleSignOut}
+          authError={authError}
+          darkMode={darkMode}
+          setCurrentPage={setCurrentPage}
+        />
+      );
 
     // ===== NEW: Location Input Page =====
     case "location-input":
