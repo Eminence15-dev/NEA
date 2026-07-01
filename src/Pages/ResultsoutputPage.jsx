@@ -5,7 +5,7 @@
 import { TrendingUp, AlertTriangle, UserPlus, Award, Sparkles } from "lucide-react";
 import GraphVisualizationModule from "../components/GraphVisualizationModule";
 
-const ResultsOutputPage = ({ simulationResults, athleteName, darkMode, comparisonReports, percentileRanking, onViewComparison, runnerInsights, runnerAuthenticated, runnerName }) => {
+const ResultsOutputPage = ({ simulationResults, athleteName, darkMode, comparisonReports, percentileRanking, onViewComparison, runnerInsights, runnerAuthenticated, runnerName, runnerTime, runnerComparisonAdvice }) => {
   const dm = darkMode;
   const card = dm ? "bg-[#090909] border border-[#b19149]/20" : "bg-white border border-gray-200";
   const text = dm ? "text-[#f8d06b]" : "text-black";
@@ -117,61 +117,27 @@ const ResultsOutputPage = ({ simulationResults, athleteName, darkMode, compariso
         </div>
       )}
 
-      {/* ===== NEW: Comparison Section ===== */}
-      {comparisonReports && comparisonReports.length > 0 && (
+      {(comparisonReports && comparisonReports.length > 0) || (runnerTime && runnerComparisonAdvice && runnerComparisonAdvice.length > 0) ? (
         <div className={`${dm? 'bg-[#090909] border border-[#b19149]/15 rounded-2xl shadow-[0_25px_70px_rgba(0,0,0,0.35)] p-8' : 'bg-white border border-gray-100 rounded-2xl shadow p-8'}`}>
-          <h3 className={`text-xl font-bold mb-4 ${text}`}>📊 Historical Comparison</h3>
-          <p className={`${muted} mb-4 text-sm`}>Your conditions compared to {comparisonReports.length} similar historical runs:</p>
-          
-          <div className="space-y-2">
-            {comparisonReports.slice(0, 3).map((report, idx) => (
-              <div key={idx} className={`p-4 rounded-lg border ${dm? 'bg-[#0f0f0f] border-[#b19149]/20' : 'bg-gray-50 border-gray-200'}`}>
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <p className={`font-semibold ${text}`}>#{report.rank} • {report.comparison.name}</p>
-                    <p className={`text-xs ${muted}`}>{report.comparison.venue} ({report.comparison.year}) • {report.comparison.country}</p>
-                  </div>
-                  <div className={`px-3 py-1 rounded-full text-sm font-bold ${
-                    report.similarityPercentage >= 80 ? 'bg-green-500/20 text-green-400' :
-                    report.similarityPercentage >= 60 ? 'bg-yellow-500/20 text-yellow-400' :
-                    'bg-orange-500/20 text-orange-400'
-                  }`}>
-                    {report.similarityPercentage}% match
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-xs">
-                  <div>
-                    <span className={muted}>Their Time</span>
-                    <p className={`font-bold ${text}`}>{report.comparison.theirTime}</p>
-                  </div>
-                  <div>
-                    <span className={muted}>Your Prediction</span>
-                    <p className={`font-bold ${text}`}>{report.comparison.yourPredictedTime}</p>
-                  </div>
-                  <div>
-                    <span className={muted}>Difference</span>
-                    <p className={`font-bold ${parseFloat(report.comparison.timeDifference) < 0 ? 'text-green-400' : 'text-orange-400'}`}>
-                      {parseFloat(report.comparison.timeDifference) < 0 ? '−' : '+'}
-                      {Math.abs(parseFloat(report.comparison.timeDifference)).toFixed(2)}s
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
+          <h3 className={`text-xl font-bold mb-4 ${text} flex items-center gap-2`}>
+            <TrendingUp size={20} />
+            Comparison Analysis
+          </h3>
+          <p className={`${muted} mb-4 text-sm`}>
+            Open the dedicated comparison page for the full historical review and your personal time-vs-runner breakdown.
+          </p>
           <button
             onClick={onViewComparison}
-            className={`w-full mt-4 p-3 rounded-lg font-semibold transition-all ${
+            className={`w-full p-3 rounded-lg font-semibold transition-all ${
               dm 
                 ? 'bg-[#b19149] text-black hover:bg-[#d4a574]' 
                 : 'bg-[#0b74de] text-white hover:bg-[#0859a1]'
             }`}
           >
-            📊 View Full Comparison ({comparisonReports.length} runs)
+            📊 View Full Comparison {comparisonReports && comparisonReports.length > 0 ? `(${comparisonReports.length} historical runs)` : ""}
           </button>
         </div>
-      )}
+      ) : null}
     </div>
   );
 };

@@ -34,6 +34,10 @@ import { getStaticAthletes } from "../data/athleteData";
  * Falls back to local athleteData.js if Firestore is unavailable.
  */
 export const loadStaticAthletes = async () => {
+  if (!db) {
+    return getStaticAthletes();
+  }
+
   try {
     const snapshot = await getDocs(collection(db, "athletes"));
     if (snapshot.docs.length > 0) {
@@ -51,6 +55,10 @@ export const loadStaticAthletes = async () => {
 // ── Custom Athletes ───────────────────────────────────────────────
 
 export const loadCustomAthletes = async () => {
+  if (!db) {
+    return [];
+  }
+
   try {
     const snapshot = await getDocs(collection(db, "custom-athletes"));
     return snapshot.docs.map(doc => doc.data());
@@ -58,6 +66,10 @@ export const loadCustomAthletes = async () => {
 };
 
 export const saveCustomAthletes = async (athletes) => {
+  if (!db) {
+    return;
+  }
+
   try {
     // Clear existing custom athletes
     const existing = await getDocs(collection(db, "custom-athletes"));

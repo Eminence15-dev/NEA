@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Mail, Lock, User, UserPlus, ArrowRight, CheckCircle } from "lucide-react";
 
-const AuthPage = ({ authUser, onSignIn, onSignUp, onSignOut, authError, darkMode, setCurrentPage }) => {
+const AuthPage = ({ authUser, onSignIn, onSignUp, onSignOut, authError, darkMode, setCurrentPage, firebaseEnabled, firebaseInitErrorMessage }) => {
   const [mode, setMode] = useState("signIn");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,6 +17,10 @@ const AuthPage = ({ authUser, onSignIn, onSignUp, onSignOut, authError, darkMode
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (!firebaseEnabled) {
+      setLocalError("Firebase is not configured correctly. Check your .env file and restart the app.");
+      return;
+    }
     setLocalError("");
     if (!email || !password) {
       setLocalError("Please enter both email and password.");
@@ -97,12 +101,17 @@ const AuthPage = ({ authUser, onSignIn, onSignUp, onSignOut, authError, darkMode
                 </div>
               </div>
             )}
+            {(!firebaseEnabled && firebaseInitErrorMessage) && (
+              <div className="rounded-2xl border border-yellow-400/20 bg-yellow-100 p-4 text-sm text-yellow-800">
+                <strong>Firebase setup issue:</strong> {firebaseInitErrorMessage}
+              </div>
+            )}
             {(localError || authError) && (
               <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-700">{localError || authError}</div>
             )}
-            <button type="submit" disabled={submitting}
-              className="w-full inline-flex items-center justify-center gap-2 px-6 py-4 rounded-2xl bg-[#B83E18] text-white font-semibold hover:bg-[#8F2E0E] transition-colors disabled:opacity-60">
-              {mode === "signIn" ? "Sign in" : "Create account"}
+            <button type="submit" disabled={submitting || !firebaseEnabled}
+              className={`w-full inline-flex items-center justify-center gap-2 px-6 py-4 rounded-2xl text-white font-semibold transition-colors ${submitting || !firebaseEnabled ? "bg-gray-400" : "bg-[#B83E18] hover:bg-[#8F2E0E]"}`}>
+              {firebaseEnabled ? (mode === "signIn" ? "Sign in" : "Create account") : "Setup Firebase first"}
             </button>
           </form>
         )}

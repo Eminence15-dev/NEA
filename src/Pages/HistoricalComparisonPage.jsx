@@ -3,20 +3,23 @@
 // Displays similar historical runs and performance comparison
 // ================================================================
 
-import { TrendingDown, Zap, AlertTriangle, Target, Award } from "lucide-react";
+import { TrendingDown, Zap, AlertTriangle, Target, Award, TrendingUp } from "lucide-react";
 
-const HistoricalComparisonPage = ({ comparisonReports, darkMode }) => {
+const HistoricalComparisonPage = ({ comparisonReports, runnerComparisonAdvice, runnerTime, runnerName, darkMode }) => {
   const dm = darkMode;
   const text = dm ? "text-[#f8d06b]" : "text-[#0b74de]";
   const muted = dm ? "text-[#a78b3c]" : "text-gray-600";
   const card = dm ? "bg-[#090909] border-[#b19149]/20" : "bg-white border-gray-200";
   const bgAccent = dm ? "bg-[#1a1a1a]" : "bg-[#f0f9ff]";
 
-  if (!comparisonReports || comparisonReports.length === 0) {
+  const hasHistoricalComparisons = comparisonReports && comparisonReports.length > 0;
+  const hasRunnerComparisons = Boolean(runnerComparisonAdvice && runnerComparisonAdvice.length > 0);
+
+  if (!hasHistoricalComparisons && !hasRunnerComparisons) {
     return (
       <div className={`min-h-screen ${dm ? "bg-black" : "bg-white"} p-5`}>
         <div className={`${card} rounded-2xl shadow-lg p-8 text-center`}>
-          <p className={muted}>No historical comparisons available</p>
+          <p className={muted}>No detailed comparisons available yet</p>
         </div>
       </div>
     );
@@ -29,15 +32,17 @@ const HistoricalComparisonPage = ({ comparisonReports, darkMode }) => {
         <div className={`${card} rounded-2xl shadow-lg p-8 border`}>
           <h2 className={`text-2xl font-bold mb-2 ${text} flex items-center gap-2`}>
             <Award size={24} />
-            Performance Comparison
+            Detailed Comparison Page
           </h2>
           <p className={muted}>
-            Your predicted time compared to {comparisonReports.length} similar historical runs
+            {hasHistoricalComparisons
+              ? `Your official recorded time compared to ${comparisonReports.length} similar historical runs`
+              : "Your personal time comparison is ready below"}
           </p>
         </div>
 
-        {/* Comparison Reports */}
-        {comparisonReports.map((report, index) => (
+        {/* Historical Comparison Reports */}
+        {hasHistoricalComparisons && comparisonReports.map((report, index) => (
           <div
             key={index}
             className={`${card} rounded-2xl shadow-lg p-8 border overflow-hidden`}
@@ -101,8 +106,8 @@ const HistoricalComparisonPage = ({ comparisonReports, darkMode }) => {
               </div>
 
               <div className={`${bgAccent} rounded-lg p-4 text-center border ${dm ? "border-[#b19149]/10" : "border-[#bae6fd]"}`}>
-                <p className={`${muted} text-xs font-semibold uppercase mb-2`}>Your Prediction</p>
-                <p className={`text-2xl font-bold ${text}`}>{report.comparison.yourPredictedTime}</p>
+                <p className={`${muted} text-xs font-semibold uppercase mb-2`}>Your Official Time</p>
+                <p className={`text-2xl font-bold ${text}`}>{report.comparison.yourRecordedTime}</p>
               </div>
 
               <div
@@ -199,6 +204,68 @@ const HistoricalComparisonPage = ({ comparisonReports, darkMode }) => {
             )}
           </div>
         ))}
+
+        {/* Runner time comparisons */}
+        {hasRunnerComparisons && (
+          <div className={`${card} rounded-2xl shadow-lg p-8 border`}>
+            <h3 className={`text-xl font-bold mb-3 ${text} flex items-center gap-2`}>
+              <TrendingUp size={20} />
+              Your Actual Time vs Similar Runners
+            </h3>
+            <p className={`${muted} mb-5 text-sm`}>
+              {runnerName || "Runner"} recorded {runnerTime}s. The following same-gender runners were matched automatically for comparison.
+            </p>
+
+            <div className="space-y-3">
+              {runnerComparisonAdvice.map((comparison, idx) => (
+                <div key={idx} className={`p-4 rounded-lg border ${dm ? "bg-[#0f0f0f] border-[#b19149]/20" : "bg-gray-50 border-gray-200"}`}>
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <p className={`font-semibold ${text}`}>{comparison.athleteName}</p>
+                      <p className={`text-xs ${muted}`}>Their time: {comparison.athleteTime}s</p>
+                    </div>
+                    <div className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ml-2 ${
+                      comparison.performanceStatus.includes("FASTER") ? "bg-green-500/20 text-green-400" :
+                      comparison.performanceStatus.includes("MATCHED") ? "bg-blue-500/20 text-blue-400" :
+                      comparison.performanceStatus.includes("SLIGHTLY") ? "bg-yellow-500/20 text-yellow-400" :
+                      "bg-orange-500/20 text-orange-400"
+                    }`}>
+                      {comparison.performanceStatus}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 mb-3 text-sm">
+                    <div className={`p-2 rounded ${dm ? "bg-[#1a1a1a]" : "bg-white"} text-center border ${dm ? "border-[#b19149]/10" : "border-gray-100"}`}>
+                      <span className={muted}>Time Difference</span>
+                      <p className={`font-bold ${text}`}>{comparison.timeDifference > 0 ? "+" : ""}{comparison.timeDifference}s</p>
+                    </div>
+                    <div className={`p-2 rounded ${dm ? "bg-[#1a1a1a]" : "bg-white"} text-center border ${dm ? "border-[#b19149]/10" : "border-gray-100"}`}>
+                      <span className={muted}>Difference %</span>
+                      <p className={`font-bold ${text}`}>{comparison.percentDifference}%</p>
+                    </div>
+                  </div>
+
+                  <div className={`p-3 rounded-lg border-l-4 ${
+                    comparison.performanceStatus.includes("FASTER") ? "border-l-green-500 bg-green-500/5" :
+                    comparison.performanceStatus.includes("MATCHED") ? "border-l-blue-500 bg-blue-500/5" :
+                    comparison.performanceStatus.includes("SLIGHTLY") ? "border-l-yellow-500 bg-yellow-500/5" :
+                    "border-l-orange-500 bg-orange-500/5"
+                  }`}>
+                    <p className={`text-sm font-semibold ${dm ? "text-[#f8d06b]" : "text-[#0b74de]"} mb-2`}>Improvement Tips:</p>
+                    <ul className="space-y-1">
+                      {comparison.advice.map((tip, tipIdx) => (
+                        <li key={tipIdx} className={`text-sm ${muted} flex items-start gap-2`}>
+                          <span className="mt-1">•</span>
+                          <span>{tip}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

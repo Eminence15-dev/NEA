@@ -109,6 +109,8 @@ export const findSimilarRuns = (allAthletes, currentConditions, eventDistance, t
  * @returns {Object} Advice with actionable insights
  */
 export const getPerformanceAdvice = (athlete, currentConditions, predictedTime) => {
+  // Keep the predicted value for context, but use the athlete's official recorded time in the comparison output.
+  const numPredictedTime = typeof predictedTime === "number" ? predictedTime : parseFloat(predictedTime) || 0;
   const improvements = [];
   const challenges = [];
 
@@ -155,7 +157,8 @@ export const getPerformanceAdvice = (athlete, currentConditions, predictedTime) 
   return {
     athlete: athlete.name,
     athleteRecord: `${athlete.raceTime}s at ${athlete.venue} (${athlete.year})`,
-    predictedTime: predictedTime.toFixed(2),
+    comparedTime: `${parseFloat(athlete.raceTime).toFixed(2)}s`,
+    predictedTime: numPredictedTime.toFixed(2),
     improvements: improvements.length > 0 ? improvements : ["Conditions are similar to your reference athlete."],
     challenges: challenges.length > 0 ? challenges : ["No significant environmental disadvantages."],
     advice: generateAdvice(improvements, challenges, athlete),
@@ -186,12 +189,13 @@ const generateAdvice = (improvements, challenges, athlete) => {
  * Build comparison report for display
  * @param {Object} currentConditions - Current run conditions
  * @param {Array} similarAthletes - Results from findSimilarRuns
- * @param {number} predictedTime - Predicted time
+ * @param {number} referenceTime - The runner's recorded time to use as the comparison baseline
  * @returns {Array} Array of comparison reports
  */
-export const buildComparisonReports = (currentConditions, similarAthletes, predictedTime) => {
+export const buildComparisonReports = (currentConditions, similarAthletes, referenceTime) => {
+  const numReferenceTime = typeof referenceTime === "number" ? referenceTime : parseFloat(referenceTime) || 0;
   return similarAthletes.map((athlete, index) => {
-    const advice = getPerformanceAdvice(athlete, currentConditions, predictedTime);
+    const advice = getPerformanceAdvice(athlete, currentConditions, numReferenceTime);
     return {
       rank: index + 1,
       similarityPercentage: athlete.similarityScore,
@@ -202,8 +206,8 @@ export const buildComparisonReports = (currentConditions, similarAthletes, predi
         year: athlete.year,
         venue: athlete.venue,
         theirTime: `${athlete.raceTime}s`,
-        yourPredictedTime: `${predictedTime.toFixed(2)}s`,
-        timeDifference: (predictedTime - parseFloat(athlete.raceTime)).toFixed(2),
+        yourRecordedTime: `${numReferenceTime.toFixed(2)}s`,
+        timeDifference: (numReferenceTime - parseFloat(athlete.raceTime)).toFixed(2),
       },
       conditionDifferences: {
         temperature: `${athlete.temperature}°C vs ${currentConditions.temperature}°C (${athlete.temperature - currentConditions.temperature > 0 ? "+" : ""}${(athlete.temperature - currentConditions.temperature).toFixed(1)}°C)`,
@@ -227,6 +231,8 @@ export const buildComparisonReports = (currentConditions, similarAthletes, predi
  * @returns {Object} { percentile, ranking, totalAthletes }
  */
 export const calculatePercentile = (predictedTime, allAthletes, eventDistance) => {
+  // Ensure predictedTime is a number
+  const numPredictedTime = typeof predictedTime === "number" ? predictedTime : parseFloat(predictedTime) || 0;
   const sameEvent = allAthletes
     .filter(a => String(a.event) === String(eventDistance))
     .map(a => parseFloat(a.raceTime));
@@ -235,7 +241,7 @@ export const calculatePercentile = (predictedTime, allAthletes, eventDistance) =
     return { percentile: 50, ranking: null, totalAthletes: 0 };
   }
 
-  const faster = sameEvent.filter(t => t < predictedTime).length;
+  const faster = sameEvent.filter(t => t < numPredictedTime).length;
   const percentile = Math.round((faster / sameEvent.length) * 100);
 
   return {
@@ -246,10 +252,117 @@ export const calculatePercentile = (predictedTime, allAthletes, eventDistance) =
   };
 };
 
+/**
+ * Find all runners of same gender with similar times to runner's actual time
+ * @param {number} actualRunnerTime - The time the runner actually ran
+ * @param {string} runnerGender - The runner's gender (male/female)
+ * @param {Array} allAthletes - All available athletes
+ * @param {string} eventDistance - Event distance (100 or 200)
+ * @returns {Array} Matching athletes sorted by time similarity
+ */
+export const findSimilarRunnersByGenderAndTime = (actualRunnerTime, runnerGender, allAthletes, eventDistance) => {
+  const numActualTime = typeof actualRunnerTime === "number" ? actualRunnerTime : parseFloat(actualRunnerTime) || 0;
+  if (numActualTime === 0) return [];
+
+  // Define tolerance range: ±5% of actual time
+  const tolerance = numActualTime * 0.05;
+  const minTime = numActualTime - tolerance;
+  const maxTime = numActualTime + tolerance;
+
+  // Filter athletes: same gender, same event, similar time
+  const matchingAthletes = allAthletes.filter(athlete => {
+    const athleteGender = (athlete.gender || "").toLowerCase();
+    const runnerGenderNorm = (runnerGender || "").toLowerCase();
+    const athleteTime = parseFloat(athlete.raceTime);
+    
+    return (
+      athleteGender === runnerGenderNorm &&
+      String(athlete.event) === String(eventDistance) &&
+      athleteTime >= minTime &&
+      athleteTime <= maxTime
+    );
+  });
+
+  // Sort by closest time to runner's actual time and return only the 5 closest
+  return matchingAthletes
+    .sort((a, b) => {
+      const diffA = Math.abs(parseFloat(a.raceTime) - numActualTime);
+      const diffB = Math.abs(parseFloat(b.raceTime) - numActualTime);
+      return diffA - diffB;
+    })
+    .slice(0, 5);
+};
+
+/**
+ * Compare actual runner time to similar athletes and generate improvement advice
+ * @param {number} actualRunnerTime - The time the runner actually ran
+ * @param {Array} similarAthletes - Similar athletes found by findSimilarRunnersByGenderAndTime
+ * @param {Object} currentConditions - Current run conditions
+ * @returns {Array} Improvement advice based on actual performance vs similar athletes
+ */
+export const generateRunnerComparisonAdvice = (actualRunnerTime, similarAthletes, currentConditions) => {
+  const numActualTime = typeof actualRunnerTime === "number" ? actualRunnerTime : parseFloat(actualRunnerTime) || 0;
+  if (similarAthletes.length === 0 || numActualTime === 0) {
+    return [];
+  }
+
+  return similarAthletes.map((athlete) => {
+    const athleteTime = parseFloat(athlete.raceTime);
+    const timeDiff = numActualTime - athleteTime;
+    const percentDiff = ((timeDiff / athleteTime) * 100).toFixed(1);
+
+    let performanceStatus = "";
+    let advice = [];
+
+    if (timeDiff < -0.3) {
+      performanceStatus = "🏆 FASTER";
+      advice.push(`You beat ${athlete.name}'s time by ${Math.abs(timeDiff).toFixed(2)}s (${Math.abs(percentDiff)}% faster)!`);
+      advice.push(`This is excellent—your fitness and technique are performing well in these conditions.`);
+    } else if (timeDiff < 0.3) {
+      performanceStatus = "✅ MATCHED";
+      advice.push(`Your time closely matches ${athlete.name}'s (${athlete.name}: ${athleteTime}s, You: ${numActualTime.toFixed(2)}s).`);
+      advice.push(`Conditions are similar—this is a solid baseline performance.`);
+    } else if (timeDiff < 1.0) {
+      performanceStatus = "⚠️  SLIGHTLY SLOWER";
+      advice.push(`You ran ${timeDiff.toFixed(2)}s slower than ${athlete.name} (${percentDiff}% slower).`);
+      if (currentConditions.temperature > athlete.temperature) {
+        advice.push(`The warmer conditions (${currentConditions.temperature}°C vs ${athlete.temperature}°C) likely contributed.`);
+      }
+      if (currentConditions.windSpeed > athlete.wind) {
+        advice.push(`Headwind was stronger (${currentConditions.windSpeed}m/s vs ${athlete.wind}m/s)—work on wind management.`);
+      }
+      if (currentConditions.altitude > athlete.altitude) {
+        advice.push(`Higher altitude reduced oxygen availability—consider acclimatization training.`);
+      }
+      advice.push(`Focus: Improve pacing strategy and breathing efficiency in adverse conditions.`);
+    } else {
+      performanceStatus = "💪 NEEDS WORK";
+      advice.push(`You ran ${timeDiff.toFixed(2)}s slower than ${athlete.name} (${percentDiff}% slower).`);
+      advice.push(`Analyze: Was it fitness, pacing strategy, or environmental factors?`);
+      if (currentConditions.humidity > athlete.humidity + 10) {
+        advice.push(`High humidity (${currentConditions.humidity}%) drained energy—hydration strategy review needed.`);
+      }
+      advice.push(`Next steps: Identify the limiting factor and build targeted training.`);
+    }
+
+    return {
+      athleteName: athlete.name,
+      athleteTime: athleteTime,
+      yourTime: numActualTime.toFixed(2),
+      timeDifference: timeDiff.toFixed(2),
+      percentDifference: percentDiff,
+      performanceStatus,
+      advice,
+    };
+  });
+};
+
 export default {
   calculateConditionSimilarity,
   findSimilarRuns,
   getPerformanceAdvice,
   buildComparisonReports,
   calculatePercentile,
+  findSimilarRunnersByGenderAndTime,
+  generateRunnerComparisonAdvice,
 };

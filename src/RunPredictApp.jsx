@@ -7,7 +7,7 @@ import { UserPlus, Database, MapPin } from "lucide-react";
 
 import { STORAGE_KEYS, PB_RANGES } from "./data/athleteData";
 import { runSimulation } from "./modules/SimulationEngine";
-import { findSimilarRuns, buildComparisonReports, calculatePercentile } from "./modules/HistoricalComparisonModule";
+import { findSimilarRuns, buildComparisonReports, calculatePercentile, generateRunnerComparisonAdvice, findSimilarRunnersByGenderAndTime } from "./modules/HistoricalComparisonModule";
 import {
   loadCustomAthletes, loadRecentSimulations,
   saveCustomAthletes, saveRecentSimulations,
@@ -16,6 +16,7 @@ import {
 } from "./modules/DataStorageModule";
 import { normalizeRunnerInput, generateRunnerAdvice } from "./modules/RunnerInsightsModule";
 import { initAuthListener, signIn, signUp, signOut } from "./modules/AuthModule";
+import { firebaseEnabled, firebaseInitErrorMessage } from "./firebase";
 
 import HomePage               from "./pages/HomePage";
 import RunnerInputPage        from "./pages/RunnerInputPage";
@@ -55,7 +56,7 @@ const RunPredictApp = () => {
   const toggleDarkMode = () => setDarkMode(prev => !prev);
 
   // ── Shared State ─────────────────────────────────────────────────
-  const [currentPage,       setCurrentPage]       = useState("auth");
+  const [currentPage,       setCurrentPage]       = useState("dashboard");
   const [simulationResults, setSimulationResults] = useState(null);
   const [customAthletes,    setCustomAthletes]    = useState([]);
   const [staticAthletes,    setStaticAthletes]    = useState([]);
@@ -67,6 +68,7 @@ const RunPredictApp = () => {
   const [calculating,       setCalculating]       = useState(false);
   const [authUser,          setAuthUser]          = useState(null);
   const [authError,         setAuthError]         = useState("");
+  const [authReady,         setAuthReady]         = useState(true);
 
   const [formData, setFormData] = useState({
     athleteName: "", eventDistance: "100", trackCondition: "optimal",
@@ -77,6 +79,7 @@ const RunPredictApp = () => {
     runnerLocation: "",
     runnerDate: "",
     runnerPerformance: "steady",
+    runnerGender: "male",
     runnerNotes: "",
   });
   const [touched,         setTouched]         = useState({ athleteName: false });
@@ -99,6 +102,7 @@ const RunPredictApp = () => {
     }
   });
   const [runnerAuthenticated,  setRunnerAuthenticated]  = useState(() => Boolean(localStorage.getItem("runpredict-runner-profile")));
+  const [runnerComparisonAdvice, setRunnerComparisonAdvice] = useState(null);
 
   // ── Load from Firestore ───────────────────────────────────────────
   useEffect(() => {
@@ -114,14 +118,16 @@ const RunPredictApp = () => {
     };
     load();
 
-    const unsubscribe = initAuthListener(user => {
-      setAuthUser(user);
-      if (!user) {
-        setCurrentPage("auth");
-      }
-    });
+    // Auth is disabled for now — skip Firebase listener
+    // Uncomment below to re-enable Firebase auth
+    // const unsubscribe = initAuthListener(user => {
+    //   setAuthUser(user);
+    //   setAuthReady(true);
+    //   setCurrentPage(user ? "dashboard" : "auth");
+    // });
+    // return () => unsubscribe && unsubscribe();
 
-    return () => unsubscribe && unsubscribe();
+    return () => {};
   }, []);
 
   useEffect(() => { saveCustomAthletes(customAthletes); },       [customAthletes]);
@@ -144,46 +150,32 @@ const RunPredictApp = () => {
   };
 
   const handleSignIn = async (email, password) => {
-    setAuthError("");
-    try {
-      await signIn(email, password);
-      setCurrentPage("dashboard");
-    } catch (error) {
-      setAuthError(error.message || "Sign in failed.");
-    }
+    // Auth disabled for now
+    setCurrentPage("dashboard");
   };
 
   const handleSignUp = async (email, password) => {
-    setAuthError("");
-    try {
-      await signUp(email, password);
-      setCurrentPage("dashboard");
-    } catch (error) {
-      setAuthError(error.message || "Sign up failed.");
-    }
+    // Auth disabled for now
+    setCurrentPage("dashboard");
   };
 
   const handleSignOut = async () => {
-    setAuthError("");
-    try {
-      await signOut();
-      setAuthUser(null);
-      setCurrentPage("auth");
-    } catch (error) {
-      setAuthError(error.message || "Sign out failed.");
-    }
+    // Auth disabled for now
+    setCurrentPage("dashboard");
   };
 
   const allAthletes = [...staticAthletes, ...customAthletes];
 
   // ── Loading screen ────────────────────────────────────────────────
-  if (loadingAthletes) {
+  if (loadingAthletes || !authReady) {
     return (
       <div className={`min-h-screen flex items-center justify-center ${darkMode ? "bg-[#1E2A3A]" : "bg-gray-50"}`}>
         <div className="text-center">
           <div className="text-6xl mb-4">🏃</div>
           <h2 className={`text-2xl font-bold mb-2 ${darkMode ? "text-white" : "text-gray-800"}`}>RunPredict</h2>
-          <p className={darkMode ? "text-[#7A90B8]" : "text-gray-500"}>Loading athletes from database...</p>
+          <p className={darkMode ? "text-[#7A90B8]" : "text-gray-500"}>
+            {loadingAthletes ? "Loading athletes from database..." : "Checking account status..."}
+          </p>
         </div>
       </div>
     );
@@ -252,6 +244,10 @@ const RunPredictApp = () => {
 
         // Build detailed comparison reports
         if (similarAthletes.length > 0) {
+          const comparisonReferenceTime = formData.runnerTime && parseFloat(formData.runnerTime) > 0
+            ? parseFloat(formData.runnerTime)
+            : results.predictedTime;
+
           const reports = buildComparisonReports(
             {
               temperature: parseFloat(formData.temperature),
@@ -261,7 +257,7 @@ const RunPredictApp = () => {
               trackCondition: formData.trackCondition,
             },
             similarAthletes,
-            results.predictedTime
+            comparisonReferenceTime
           );
           setComparisonReports(reports);
 
@@ -272,6 +268,33 @@ const RunPredictApp = () => {
             formData.eventDistance
           );
           setPercentileRanking(percentile);
+
+          // === NEW: Generate runner time comparison advice ===
+          // If runner entered their actual time, find all same-gender runners with similar times
+          if (formData.runnerTime && parseFloat(formData.runnerTime) > 0) {
+            const runnerGender = formData.runnerGender || selectedAthlete?.gender || "male";
+            const matchingRunners = findSimilarRunnersByGenderAndTime(
+              parseFloat(formData.runnerTime),
+              runnerGender,
+              allAthletes,
+              formData.eventDistance
+            );
+
+            if (matchingRunners.length > 0) {
+              const comparisonAdvice = generateRunnerComparisonAdvice(
+                parseFloat(formData.runnerTime),
+                matchingRunners,
+                {
+                  temperature: parseFloat(formData.temperature),
+                  humidity: parseFloat(formData.humidity),
+                  windSpeed: parseFloat(formData.tailwind),
+                  altitude: parseFloat(formData.altitude),
+                  trackCondition: formData.trackCondition,
+                }
+              );
+              setRunnerComparisonAdvice(comparisonAdvice);
+            }
+          }
         }
       }
       // ===== END: Historical Comparison =====
@@ -322,6 +345,8 @@ const RunPredictApp = () => {
           authError={authError}
           darkMode={darkMode}
           setCurrentPage={setCurrentPage}
+          firebaseEnabled={firebaseEnabled}
+          firebaseInitErrorMessage={firebaseInitErrorMessage}
         />
       );
 
@@ -357,6 +382,9 @@ const RunPredictApp = () => {
         <>
           <HistoricalComparisonPage
             comparisonReports={comparisonReports}
+            runnerComparisonAdvice={runnerComparisonAdvice}
+            runnerTime={formData.runnerTime}
+            runnerName={formData.runnerName}
             darkMode={darkMode}
           />
           <div className="flex justify-center py-8">
@@ -402,6 +430,8 @@ const RunPredictApp = () => {
               runnerInsights={runnerInsights}
               runnerAuthenticated={runnerAuthenticated}
               runnerName={formData.runnerName}
+              runnerTime={formData.runnerTime}
+              runnerComparisonAdvice={runnerComparisonAdvice}
             />
           </div>
         </div>

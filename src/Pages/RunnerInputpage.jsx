@@ -28,6 +28,7 @@ const RunnerInputPage = ({
       athleteName: athlete.name, eventDistance: athlete.event,
       tailwind: String(athlete.wind), temperature: String(athlete.temperature),
       humidity: String(athlete.humidity), altitude: String(athlete.altitude),
+      runnerGender: athlete.gender || prev.runnerGender || "male",
     }));
     setSelectedAthlete(athlete);
     setTouched(prev => ({ ...prev, athleteName: true }));
@@ -129,6 +130,14 @@ const RunnerInputPage = ({
                   <option value="fatigued">Fatigued</option>
                 </select>
               </div>
+            </div>
+            <div>
+              <label className={`block mb-1 text-sm ${muted} font-medium`}>Gender</label>
+              <select name="runnerGender" value={formData.runnerGender || "male"} onChange={handleChange}
+                className={`w-full p-3 rounded-xl outline-none transition-all shadow-sm ${inputBase}`}>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+              </select>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
