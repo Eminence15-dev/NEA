@@ -101,67 +101,6 @@ const RunnerInputPage = ({
           )}
         </div>
 
-        {/* Runner Profile & Session Log */}
-        <div className={`${dm? 'p-4 rounded-xl border-2 bg-[#0f0f0f] border-[#b19149]/20' : 'p-4 rounded-xl border bg-white border-gray-100'}`}>
-          <div className={`text-xs font-semibold mb-3 uppercase tracking-wide ${dm? 'text-[#f8d06b]' : 'text-black'}`}>
-            <div className="flex items-center gap-2"><UserCircle size={15}/>Runner profile & session log</div>
-          </div>
-          <p className={`text-xs mb-3 ${muted}`}>Add your own run details to generate personal coaching suggestions alongside the simulation.</p>
-          <div className="space-y-3">
-            <div>
-              <label className={`block mb-1 text-sm ${muted} font-medium`}>Runner name</label>
-              <input type="text" name="runnerName" value={formData.runnerName} onChange={handleChange}
-                placeholder="Enter your name"
-                className={`w-full p-3 rounded-xl outline-none transition-all shadow-sm ${inputBase}`} />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className={`block mb-1 text-sm ${muted} font-medium`}>Actual time (s)</label>
-                <input type="number" step="0.01" name="runnerTime" value={formData.runnerTime} onChange={handleChange}
-                  placeholder="e.g. 9.81"
-                  className={`w-full p-3 rounded-xl outline-none transition-all shadow-sm ${inputBase}`} />
-              </div>
-              <div>
-                <label className={`block mb-1 text-sm ${muted} font-medium`}>Performance</label>
-                <select name="runnerPerformance" value={formData.runnerPerformance} onChange={handleChange}
-                  className={`w-full p-3 rounded-xl outline-none transition-all shadow-sm ${inputBase}`}>
-                  <option value="steady">Steady</option>
-                  <option value="strong">Strong</option>
-                  <option value="fatigued">Fatigued</option>
-                </select>
-              </div>
-            </div>
-            <div>
-              <label className={`block mb-1 text-sm ${muted} font-medium`}>Gender</label>
-              <select name="runnerGender" value={formData.runnerGender || "male"} onChange={handleChange}
-                className={`w-full p-3 rounded-xl outline-none transition-all shadow-sm ${inputBase}`}>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-              </select>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className={`block mb-1 text-sm ${muted} font-medium`}>Location</label>
-                <input type="text" name="runnerLocation" value={formData.runnerLocation} onChange={handleChange}
-                  placeholder="e.g. Manchester"
-                  className={`w-full p-3 rounded-xl outline-none transition-all shadow-sm ${inputBase}`} />
-              </div>
-              <div>
-                <label className={`block mb-1 text-sm ${muted} font-medium`}>Date</label>
-                <input type="date" name="runnerDate" value={formData.runnerDate} onChange={handleChange}
-                  className={`w-full p-3 rounded-xl outline-none transition-all shadow-sm ${inputBase}`} />
-              </div>
-            </div>
-            <div>
-              <label className={`block mb-1 text-sm ${muted} font-medium`}>Notes</label>
-              <textarea name="runnerNotes" value={formData.runnerNotes} onChange={handleChange} rows={2}
-                placeholder="How did the run feel?"
-                className={`w-full p-3 rounded-xl outline-none transition-all shadow-sm ${inputBase}`} />
-            </div>
-          </div>
-        </div>
-
-        {/* Original Race Info */}
         {selectedAthlete && (
           <div className={`${dm? 'p-4 rounded-xl border-2 bg-[#0f0f0f] border-[#b19149]/20' : 'p-4 rounded-xl border bg-white border-gray-100'}`}>
             <div className={`text-xs font-semibold mb-2 uppercase tracking-wide ${dm? 'text-[#f8d06b]' : 'text-black'}`}>📍 Original Race Conditions (pre-filled below)</div>

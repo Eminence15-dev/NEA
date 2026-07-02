@@ -270,27 +270,31 @@ export const findSimilarRunnersByGenderAndTime = (actualRunnerTime, runnerGender
   const maxTime = numActualTime + tolerance;
 
   // Filter athletes: same gender, same event, similar time
-  const matchingAthletes = allAthletes.filter(athlete => {
-    const athleteGender = (athlete.gender || "").toLowerCase();
-    const runnerGenderNorm = (runnerGender || "").toLowerCase();
-    const athleteTime = parseFloat(athlete.raceTime);
-    
-    return (
-      athleteGender === runnerGenderNorm &&
-      String(athlete.event) === String(eventDistance) &&
-      athleteTime >= minTime &&
-      athleteTime <= maxTime
-    );
-  });
-
-  // Sort by closest time to runner's actual time and return only the 5 closest
-  return matchingAthletes
-    .sort((a, b) => {
-      const diffA = Math.abs(parseFloat(a.raceTime) - numActualTime);
-      const diffB = Math.abs(parseFloat(b.raceTime) - numActualTime);
-      return diffA - diffB;
+  const runnerGenderNorm = (runnerGender || "").toLowerCase();
+  const athleteCandidates = allAthletes
+    .filter(athlete => {
+      const athleteGender = (athlete.gender || "").toLowerCase();
+      return (
+        athleteGender === runnerGenderNorm &&
+        String(athlete.event) === String(eventDistance)
+      );
     })
-    .slice(0, 5);
+    .map(athlete => ({
+      athlete,
+      timeDiff: Math.abs(parseFloat(athlete.raceTime) - numActualTime),
+      athleteTime: parseFloat(athlete.raceTime),
+    }));
+
+  if (athleteCandidates.length === 0) return [];
+
+  // Prefer same-gender same-event athletes in a 5% window, but fall back to nearest matches.
+  const inTolerance = athleteCandidates.filter(candidate => candidate.athleteTime >= minTime && candidate.athleteTime <= maxTime);
+  const sortedCandidates = (inTolerance.length > 0 ? inTolerance : athleteCandidates)
+    .sort((a, b) => a.timeDiff - b.timeDiff)
+    .slice(0, 5)
+    .map(candidate => candidate.athlete);
+
+  return sortedCandidates;
 };
 
 /**

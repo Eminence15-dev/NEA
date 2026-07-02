@@ -7,7 +7,7 @@ import { UserPlus, Database, MapPin } from "lucide-react";
 
 import { STORAGE_KEYS, PB_RANGES } from "./data/athleteData";
 import { runSimulation } from "./modules/SimulationEngine";
-import { findSimilarRuns, buildComparisonReports, calculatePercentile, generateRunnerComparisonAdvice, findSimilarRunnersByGenderAndTime } from "./modules/HistoricalComparisonModule";
+import { computeComparisonAnalysis } from "./modules/ComparisonProcess";
 import {
   loadCustomAthletes, loadRecentSimulations,
   saveCustomAthletes, saveRecentSimulations,
@@ -227,77 +227,10 @@ const RunPredictApp = () => {
         setRunnerAuthenticated(true);
       }
 
-      // ===== NEW: Historical Comparison =====
-      if (allAthletes.length > 0) {
-        const similarAthletes = findSimilarRuns(
-          allAthletes,
-          {
-            temperature: parseFloat(formData.temperature),
-            humidity: parseFloat(formData.humidity),
-            windSpeed: parseFloat(formData.tailwind),
-            altitude: parseFloat(formData.altitude),
-            trackCondition: formData.trackCondition,
-          },
-          formData.eventDistance,
-          5 // Show top 5 similar runs
-        );
-
-        // Build detailed comparison reports
-        if (similarAthletes.length > 0) {
-          const comparisonReferenceTime = formData.runnerTime && parseFloat(formData.runnerTime) > 0
-            ? parseFloat(formData.runnerTime)
-            : results.predictedTime;
-
-          const reports = buildComparisonReports(
-            {
-              temperature: parseFloat(formData.temperature),
-              humidity: parseFloat(formData.humidity),
-              windSpeed: parseFloat(formData.tailwind),
-              altitude: parseFloat(formData.altitude),
-              trackCondition: formData.trackCondition,
-            },
-            similarAthletes,
-            comparisonReferenceTime
-          );
-          setComparisonReports(reports);
-
-          // Calculate percentile ranking
-          const percentile = calculatePercentile(
-            results.predictedTime,
-            allAthletes,
-            formData.eventDistance
-          );
-          setPercentileRanking(percentile);
-
-          // === NEW: Generate runner time comparison advice ===
-          // If runner entered their actual time, find all same-gender runners with similar times
-          if (formData.runnerTime && parseFloat(formData.runnerTime) > 0) {
-            const runnerGender = formData.runnerGender || selectedAthlete?.gender || "male";
-            const matchingRunners = findSimilarRunnersByGenderAndTime(
-              parseFloat(formData.runnerTime),
-              runnerGender,
-              allAthletes,
-              formData.eventDistance
-            );
-
-            if (matchingRunners.length > 0) {
-              const comparisonAdvice = generateRunnerComparisonAdvice(
-                parseFloat(formData.runnerTime),
-                matchingRunners,
-                {
-                  temperature: parseFloat(formData.temperature),
-                  humidity: parseFloat(formData.humidity),
-                  windSpeed: parseFloat(formData.tailwind),
-                  altitude: parseFloat(formData.altitude),
-                  trackCondition: formData.trackCondition,
-                }
-              );
-              setRunnerComparisonAdvice(comparisonAdvice);
-            }
-          }
-        }
-      }
-      // ===== END: Historical Comparison =====
+      // Clear prior comparison data until user visits the comparison page
+      setComparisonReports(null);
+      setPercentileRanking(null);
+      setRunnerComparisonAdvice(null);
 
       setCurrentPage("simulation");
     } catch (err) {
@@ -312,6 +245,25 @@ const RunPredictApp = () => {
     setCustomAthletes(prev => removeCustomAthlete(prev, name, event));
     showToast(`${name} removed from database.`, "info");
   };
+
+  const refreshComparisonData = () => {
+    if (!simulationResults || allAthletes.length === 0) return;
+    const {
+      comparisonReports: reports,
+      percentileRanking: percentile,
+      runnerComparisonAdvice: comparisonAdvice,
+    } = computeComparisonAnalysis({ formData, allAthletes, simulationResults });
+
+    setComparisonReports(reports);
+    setPercentileRanking(percentile);
+    setRunnerComparisonAdvice(comparisonAdvice);
+  };
+
+  useEffect(() => {
+    if (currentPage === "comparison") {
+      refreshComparisonData();
+    }
+  }, [currentPage, formData.runnerTime, formData.runnerGender, formData.temperature, formData.humidity, formData.tailwind, formData.altitude, formData.trackCondition, allAthletes, simulationResults]);
 
   const handleClearSimulations = async () => {
     setRecentSimulations([]);
@@ -386,6 +338,9 @@ const RunPredictApp = () => {
             runnerTime={formData.runnerTime}
             runnerName={formData.runnerName}
             darkMode={darkMode}
+            formData={formData}
+            setFormData={setFormData}
+            onRefreshComparison={refreshComparisonData}
           />
           <div className="flex justify-center py-8">
             <button

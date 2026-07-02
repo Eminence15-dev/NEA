@@ -5,25 +5,25 @@
 
 import { TrendingDown, Zap, AlertTriangle, Target, Award, TrendingUp } from "lucide-react";
 
-const HistoricalComparisonPage = ({ comparisonReports, runnerComparisonAdvice, runnerTime, runnerName, darkMode }) => {
+const HistoricalComparisonPage = ({ comparisonReports, runnerComparisonAdvice, runnerTime, runnerName, darkMode, formData, setFormData, onRefreshComparison }) => {
   const dm = darkMode;
   const text = dm ? "text-[#f8d06b]" : "text-[#0b74de]";
   const muted = dm ? "text-[#a78b3c]" : "text-gray-600";
   const card = dm ? "bg-[#090909] border-[#b19149]/20" : "bg-white border-gray-200";
   const bgAccent = dm ? "bg-[#1a1a1a]" : "bg-[#f0f9ff]";
+  const inputBase = dm ? "bg-[#0f0f0f] text-[#f8d06b] placeholder-[#8f7d45] border-[#b19149]/20" : "bg-[#f8fbff] text-black placeholder-[#6b7280] border border-[#bae6fd] shadow-sm";
+
+  const handleChange = (e) => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
 
   const hasHistoricalComparisons = comparisonReports && comparisonReports.length > 0;
   const hasRunnerComparisons = Boolean(runnerComparisonAdvice && runnerComparisonAdvice.length > 0);
 
-  if (!hasHistoricalComparisons && !hasRunnerComparisons) {
-    return (
-      <div className={`min-h-screen ${dm ? "bg-black" : "bg-white"} p-5`}>
-        <div className={`${card} rounded-2xl shadow-lg p-8 text-center`}>
-          <p className={muted}>No detailed comparisons available yet</p>
-        </div>
-      </div>
-    );
-  }
+  const handleInputChange = (e) => {
+    handleChange(e);
+    if (e.target.name === "runnerTime" || e.target.name === "runnerGender") {
+      onRefreshComparison?.();
+    }
+  };
 
   return (
     <div className={`min-h-screen ${dm ? "bg-black" : "bg-white"} p-5`}>
@@ -41,7 +41,45 @@ const HistoricalComparisonPage = ({ comparisonReports, runnerComparisonAdvice, r
           </p>
         </div>
 
-        {/* Historical Comparison Reports */}
+        {/* Runner Profile & Comparison Input */}
+        <div className={`${card} rounded-2xl shadow-lg p-8 border`}>
+          <div className={`text-sm font-semibold mb-4 ${text}`}>Runner profile & comparison input</div>
+          <div className={`p-4 rounded-xl ${dm ? 'bg-[#0f0f0f] border border-[#b19149]/20' : 'bg-white border border-gray-100'}`}>
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <div>
+                <label className={`block mb-2 text-xs font-semibold uppercase ${muted}`}>Runner Name</label>
+                <input name="runnerName" value={formData.runnerName} onChange={handleChange} placeholder="Enter your name"
+                  className={`w-full p-3 rounded-2xl outline-none transition-all shadow-sm ${inputBase}`} />
+              </div>
+              <div>
+                <label className={`block mb-2 text-xs font-semibold uppercase ${muted}`}>Actual time (s)</label>
+                <input name="runnerTime" type="number" step="0.01" value={formData.runnerTime} onChange={handleInputChange} placeholder="e.g. 9.81"
+                  className={`w-full p-3 rounded-2xl outline-none transition-all shadow-sm ${inputBase}`} />
+              </div>
+              <div>
+                <label className={`block mb-2 text-xs font-semibold uppercase ${muted}`}>Gender</label>
+                <select name="runnerGender" value={formData.runnerGender} onChange={handleInputChange}
+                  className={`w-full p-3 rounded-2xl outline-none transition-all shadow-sm ${inputBase}`}>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                </select>
+              </div>
+              <div>
+                <label className={`block mb-2 text-xs font-semibold uppercase ${muted}`}>Notes</label>
+                <textarea name="runnerNotes" value={formData.runnerNotes} onChange={handleChange} rows={3}
+                  placeholder="How did the run feel?"
+                  className={`w-full p-3 rounded-2xl outline-none transition-all shadow-sm ${inputBase}`} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {!hasHistoricalComparisons && !hasRunnerComparisons && (
+          <div className={`${card} rounded-2xl shadow-lg p-8 border text-center`}>
+            <p className={muted}>Enter a runner time and load comparisons to see the nearest matching performances.</p>
+          </div>
+        )}
+
         {hasHistoricalComparisons && comparisonReports.map((report, index) => (
           <div
             key={index}
