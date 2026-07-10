@@ -2,7 +2,6 @@
 // MODULE 9: Documentation / Help Page
 // ================================================================
 
-import { NavBar } from "./HomePage";
 
 const DocumentationPage = ({ docsTab, setDocsTab, setCurrentPage, mobileMenuOpen, setMobileMenuOpen, Toast, darkMode, toggleDarkMode }) => {
   const dm = darkMode;
